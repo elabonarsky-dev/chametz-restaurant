@@ -1,0 +1,23 @@
+{
+  "name": "restaurant-booking-system",
+  "version": "1.0.0",
+  "description": "Restaurant booking tool with Netlify Functions backend",
+  "private": true,
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "echo 'No build step required'",
+    "db:init": "node db/init.js"
+  },
+  "dependencies": {
+    "@netlify/functions": "^2.8.2",
+    "pg": "^8.13.1",
+    "stripe": "^17.5.0",
+    "uuid": "^11.0.5"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.38.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

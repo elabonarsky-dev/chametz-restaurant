@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restaurant Reservation</title>
+  <!-- Configure your Stripe publishable key here -->
+  <meta name="stripe-publishable-key" content="pk_test_YOUR_STRIPE_PUBLISHABLE_KEY">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="booking-page">
+    <!-- ==================== STEPPER ==================== -->
+    <div class="container">
+      <nav class="stepper" id="stepper">
+        <div class="stepper-step active" data-step="1">
+          <div class="stepper-circle">1</div>
+          <div class="stepper-label">Pickup Details</div>
+        </div>
+        <div class="stepper-line" data-line="1"></div>
+        <div class="stepper-step" data-step="2">
+          <div class="stepper-circle">2</div>
+          <div class="stepper-label">Preferred Dates</div>
+        </div>
+        <div class="stepper-line" data-line="2"></div>
+        <div class="stepper-step" data-step="3">
+          <div class="stepper-circle">3</div>
+          <div class="stepper-label">Guest Details</div>
+        </div>
+        <div class="stepper-line" data-line="3"></div>
+        <div class="stepper-step" data-step="4">
+          <div class="stepper-circle">4</div>
+          <div class="stepper-label">Payment</div>
+        </div>
+        <div class="stepper-line" data-line="4"></div>
+        <div class="stepper-step" data-step="5">
+          <div class="stepper-circle">5</div>
+          <div class="stepper-label">Confirmation</div>
+        </div>
+      </nav>
+    </div>
+
+    <!-- ==================== STEP 1: PICKUP ADDRESS ==================== -->
+    <section class="container" id="step-1">
+      <div class="card" style="max-width: 600px; margin: 0 auto;">
+        <div class="page-header" style="text-align:left;">
+          <h1>Enter Pick up Address</h1>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Street Address</label>
+          <div style="position:relative;">
+            <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--c-text-muted);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            </span>
+            <input type="text" id="pickup-address" class="form-input" placeholder="e.g. 123 Gourmet St, Culinary City" style="padding-left:36px;">
+          </div>
+        </div>
+
+        <div class="form-hint">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          <span>We provide pick up and drop off for experiences within a 1 hour drive of our secret location in the Western Maine Mountains. If you are outside this range, you will be asked to park at our auxiliary parking lot and we will pick you up and drop you off there.</span>
+        </div>
+
+        <div id="address-error" class="alert alert-error hidden" style="margin-top:1rem;"></div>
+
+        <div class="btn-group" style="margin-top:1.5rem;">
+          <button class="btn btn-primary btn-block btn-lg" id="btn-check-address" onclick="checkAddress()">
+            Submit Address &nbsp;→
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== STEP 1B: SERVICE AREA RESULT ==================== -->
+    <section class="container hidden" id="step-1b">
+      <div class="card" style="max-width: 600px; margin: 0 auto;">
+        <!-- Filled dynamically by JS -->
+      </div>
+    </section>
+
+    <!-- ==================== STEP 2: PREFERRED DATES ==================== -->
+    <section class="container hidden" id="step-2">
+      <div style="max-width:600px; margin:0 auto;">
+        <p class="text-secondary" style="margin-bottom:1.5rem;">Choose your top three dates to help us find the best table availability for your party.</p>
+        <div class="calendar" id="booking-calendar">
+          <!-- Calendar rendered by JS -->
+        </div>
+        <div class="selected-dates" id="selected-dates-section">
+          <div class="selected-dates-label">Selected Dates</div>
+          <div class="selected-dates-list" id="selected-dates-list">
+            <div class="select-more-chip">+ Select more</div>
+          </div>
+        </div>
+        <div class="btn-group btn-group-between" style="margin-top:2rem;">
+          <button class="btn btn-outline" onclick="goToStep(1)">← Back</button>
+          <button class="btn btn-primary" id="btn-continue-dates" onclick="goToStep(3)" disabled>Continue →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== STEP 3: GUEST DETAILS ==================== -->
+    <section class="container hidden" id="step-3">
+      <div style="max-width:600px; margin:0 auto;">
+        <div class="page-header">
+          <h1>Guest Details</h1>
+          <p class="text-secondary">Please provide details for each guest to personalize your fine dining experience.</p>
+        </div>
+        <div id="guest-cards-container">
+          <!-- Guest cards rendered by JS -->
+        </div>
+        <button class="add-guest-btn" id="btn-add-guest" onclick="addGuest()">⊕ Add Guest</button>
+
+        <div id="guest-errors" class="alert alert-error hidden" style="margin-top:1rem;"></div>
+
+        <div class="btn-group btn-group-between" style="margin-top:2rem;">
+          <button class="btn btn-outline" onclick="goToStep(2)">Back</button>
+          <button class="btn btn-primary" onclick="validateAndContinueToPayment()">Continue to Preferences</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== STEP 4: PAYMENT ==================== -->
+    <section class="container hidden" id="step-4">
+      <div style="max-width:600px; margin:0 auto;">
+        <div class="page-header">
+          <h2 style="font-family:var(--font-serif);">Reservation Deposit</h2>
+        </div>
+
+        <div class="card">
+          <div class="payment-summary">
+            <div>
+              <span class="payment-badge">$50.00 Deposit Required Per Guest</span>
+              <div style="margin-top:0.5rem; font-weight:700;">Booking Summary</div>
+              <div class="text-secondary text-sm" id="payment-guest-count" style="margin-top:0.25rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span id="guest-count-display">0 Guests</span>
+              </div>
+            </div>
+          </div>
+
+          <h3 style="margin:1.5rem 0 1rem;">Payment Method</h3>
+
+          <div id="stripe-card-element" style="margin-bottom:1rem;">
+            <!-- Stripe Elements will mount here -->
+          </div>
+          <div id="card-errors" class="form-error" style="margin-bottom:1rem;"></div>
+
+          <div class="payment-total">
+            <span class="payment-total-label">Total due now</span>
+            <span class="payment-total-amount" id="payment-total">$0.00</span>
+          </div>
+
+          <button class="btn btn-primary btn-block btn-lg" id="btn-pay" onclick="handlePayment()" disabled>
+            🔒 Pay Deposit & Confirm
+          </button>
+
+          <div class="deposit-note">Your deposit is non-refundable within 1 week of your reservation.</div>
+        </div>
+
+        <div class="secure-badges">
+          <span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Secure SSL
+          </span>
+          <span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            PCI Compliant
+          </span>
+        </div>
+
+        <div class="btn-group" style="margin-top:1.5rem;">
+          <button class="btn btn-outline" onclick="goToStep(3)">← Back</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== STEP 5: CONFIRMATION ==================== -->
+    <section class="container hidden" id="step-5">
+      <div style="max-width:600px; margin:0 auto;">
+        <div class="card">
+          <div class="confirmation">
+            <div class="confirmation-icon">✓</div>
+            <h2>Your booking request has been submitted.</h2>
+            <p>We've received your booking request and are processing it. You'll receive a confirmation text and email once your booking date has been confirmed.</p>
+
+            <div class="detail-section" style="text-align:left;">
+              <h3>📄 Booking Summary</h3>
+              <table class="booking-summary-table">
+                <tr>
+                  <td>Pickup address</td>
+                  <td id="confirm-address"></td>
+                </tr>
+                <tr>
+                  <td>Preferred dining dates</td>
+                  <td id="confirm-dates"></td>
+                </tr>
+                <tr>
+                  <td>Guest list</td>
+                  <td id="confirm-guests"></td>
+                </tr>
+                <tr>
+                  <td>Deposit paid</td>
+                  <td><span class="deposit-status">✓ Full deposit paid</span></td>
+                </tr>
+              </table>
+            </div>
+
+            <button class="btn btn-primary btn-block btn-lg" style="margin-top:1.5rem;" onclick="window.location.reload()">
+              Return to website
+            </button>
+            <div style="margin-top:0.75rem;">
+              <a href="#" class="text-secondary text-sm" onclick="window.print(); return false;">🖨️ Print Confirmation</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== LOADING OVERLAY ==================== -->
+    <div class="loading-overlay hidden" id="loading">
+      <div class="spinner"></div>
+      <span class="text-secondary" id="loading-text">Processing...</span>
+    </div>
+  </div>
+
+  <script src="https://js.stripe.com/v3/"></script>
+  <script src="js/booking.js"></script>
+</body>
+</html>
