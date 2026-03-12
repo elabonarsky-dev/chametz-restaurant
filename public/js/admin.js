@@ -4,360 +4,285 @@
 
 const API_BASE = '/api';
 let adminToken = '';
-let currentPage = 1;
-let searchQuery = '';
+let currentBookingId = '';
+let adminCalendarMonth, adminCalendarYear;
 
-// Admin calendar state
-let adminCalMonth, adminCalYear, adminDatesCache = {};
-let selectedAdminDate = null;
-
-// ─── Auth ─────────────────────────────────────────────────────
+// ─── Authentication ───────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  const saved = sessionStorage.getItem('admin_token');
-  if (saved) {
-    adminToken = saved;
-    onLoginSuccess();
+  const savedToken = sessionStorage.getItem('admin_token');
+  if (savedToken) {
+    adminToken = savedToken;
+    showApp();
   }
-  document.getElementById('admin-secret-input')?.addEventListener('keyup', (e) => {
-    if (e.key === 'Enter') adminLogin();
+  
+  const now = new Date();
+  adminCalendarMonth = now.getMonth();
+  adminCalendarYear = now.getFullYear();
+  
+  document.getElementById('admin-secret').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') authenticate();
   });
 });
 
-async function adminLogin() {
-  const input = document.getElementById('admin-secret-input');
-  const secret = input.value.trim();
+async function authenticate() {
+  const secret = document.getElementById('admin-secret').value.trim();
+  const errorEl = document.getElementById('auth-error');
+  
   if (!secret) {
-    showLoginError('Please enter the admin secret.');
+    errorEl.textContent = 'Please enter the admin secret.';
+    errorEl.classList.remove('hidden');
     return;
   }
-
+  
   showLoading('Authenticating...');
-
+  
   try {
-    const res = await fetch(`${API_BASE}/get-bookings?page=1&limit=1`, {
+    const res = await fetch(`${API_BASE}/get-bookings?limit=1`, {
       headers: { 'Authorization': `Bearer ${secret}` },
     });
-
+    
     hideLoading();
-
+    
     if (res.status === 401) {
-      showLoginError('Invalid admin credentials.');
+      errorEl.textContent = 'Invalid admin secret.';
+      errorEl.classList.remove('hidden');
       return;
     }
-
+    
     adminToken = secret;
     sessionStorage.setItem('admin_token', secret);
-    onLoginSuccess();
-  } catch {
+    showApp();
+  } catch (err) {
     hideLoading();
-    showLoginError('Connection error. Please try again.');
+    errorEl.textContent = 'Network error. Please try again.';
+    errorEl.classList.remove('hidden');
   }
 }
 
-function onLoginSuccess() {
-  document.getElementById('login-overlay').classList.add('hidden');
+function showApp() {
+  document.getElementById('auth-modal').classList.add('hidden');
   document.getElementById('admin-layout').classList.remove('hidden');
   loadBookings();
 }
 
-function showLoginError(msg) {
-  const el = document.getElementById('login-error');
-  el.textContent = msg;
-  el.classList.remove('hidden');
+// ─── View Navigation ──────────────────────────────────────────
+function showView(view, linkEl) {
+  document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
+  document.getElementById(`view-${view}`).classList.remove('hidden');
+  
+  document.querySelectorAll('.admin-nav-link').forEach(el => el.classList.remove('active'));
+  if (linkEl) linkEl.classList.add('active');
+  
+  if (view === 'bookings') loadBookings();
+  if (view === 'dates') loadDates();
 }
 
-function authHeaders() {
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${adminToken}`,
-  };
-}
-
-// ─── Navigation ───────────────────────────────────────────────
-function navigateTo(page) {
-  ['bookings', 'booking-detail', 'dates', 'settings'].forEach((p) => {
-    document.getElementById(`page-${p}`)?.classList.add('hidden');
-  });
-  document.getElementById(`page-${page}`)?.classList.remove('hidden');
-
-  document.querySelectorAll('.sidebar-nav a').forEach((a) => {
-    a.classList.toggle('active', a.dataset.page === page);
-  });
-
-  if (page === 'bookings') loadBookings();
-  if (page === 'dates') initAdminCalendar();
-}
-
-// ─── Bookings List ────────────────────────────────────────────
+// ─── Bookings ─────────────────────────────────────────────────
 async function loadBookings() {
+  showLoading('Loading bookings...');
+  
   try {
-    const params = new URLSearchParams({ page: currentPage, limit: 10 });
-    if (searchQuery) params.set('search', searchQuery);
-
-    const res = await fetch(`${API_BASE}/get-bookings?${params}`, { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/get-bookings?limit=50`, {
+      headers: { 'Authorization': `Bearer ${adminToken}` },
+    });
     const data = await res.json();
-
-    if (!res.ok) return;
-
-    renderStats(data.pagination.total);
-    renderBookingsTable(data.bookings, data.pagination);
-  } catch {
-    document.getElementById('bookings-tbody').innerHTML =
-      '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--c-error);">Failed to load bookings.</td></tr>';
+    hideLoading();
+    
+    if (!res.ok) {
+      alert(data.error || 'Failed to load bookings.');
+      return;
+    }
+    
+    renderBookings(data.bookings || []);
+  } catch (err) {
+    hideLoading();
+    alert('Network error loading bookings.');
   }
 }
 
-function renderStats(total) {
-  document.getElementById('stat-total').textContent = total.toLocaleString();
-  document.getElementById('stat-pending').textContent = '—';
-  document.getElementById('stat-today').textContent = '—';
-}
-
-function renderBookingsTable(bookings, pagination) {
+function renderBookings(bookings) {
   const tbody = document.getElementById('bookings-tbody');
-
+  const empty = document.getElementById('bookings-empty');
+  
   if (bookings.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;">No bookings found.</td></tr>';
-    document.getElementById('showing-info').textContent = 'Showing 0 of 0';
-    document.getElementById('pagination').innerHTML = '';
+    tbody.innerHTML = '';
+    empty.classList.remove('hidden');
     return;
   }
-
-  tbody.innerHTML = bookings.map((b) => {
-    const dates = parseDates(b.preferred_dates);
-    const created = new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    const shortId = b.id.substring(0, 8).toUpperCase();
-    const statusClass = b.status || 'pending';
-
+  
+  empty.classList.add('hidden');
+  
+  tbody.innerHTML = bookings.map(b => {
+    const dates = Array.isArray(b.preferred_dates) 
+      ? b.preferred_dates.slice(0, 2).join(', ') 
+      : '';
+    const statusClass = `status-badge-${b.status}`;
+    
     return `
-      <tr>
-        <td><a class="booking-id-link" href="#" onclick="viewBooking('${b.id}')">#BK-${shortId}</a></td>
-        <td>${escapeHtml(b.pickup_address?.substring(0, 40) || '—')}</td>
-        <td>${dates}</td>
-        <td>${b.guest_count || '—'}</td>
-        <td><span class="status-badge ${statusClass}">${capitalize(statusClass)}</span></td>
-        <td>${created}</td>
+      <tr onclick="viewBooking('${b.id}')">
+        <td><strong>${escapeHtml(b.phone || 'N/A')}</strong></td>
+        <td>${escapeHtml(b.phone || 'N/A')}</td>
+        <td>${escapeHtml(dates)}</td>
+        <td>${b.guest_count || 0}</td>
+        <td><span class="status-badge ${statusClass}">${b.status}</span></td>
+        <td>$${((b.deposit_amount || 0) / 100).toFixed(2)}</td>
         <td>
-          <div class="table-actions">
-            <button class="table-action-link view" onclick="viewBooking('${b.id}')">View</button>
-            <button class="table-action-link delete" onclick="deleteBooking('${b.id}')">🗑</button>
-          </div>
+          <button class="btn-icon" onclick="event.stopPropagation(); viewBooking('${b.id}')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
         </td>
       </tr>
     `;
   }).join('');
-
-  const start = (pagination.page - 1) * pagination.limit + 1;
-  const end = Math.min(pagination.page * pagination.limit, pagination.total);
-  document.getElementById('showing-info').textContent = `Showing ${start}–${end} of ${pagination.total}`;
-  renderPagination(pagination);
 }
 
-function renderPagination(p) {
-  const el = document.getElementById('pagination');
-  if (p.total_pages <= 1) { el.innerHTML = ''; return; }
-
-  let html = `<button class="page-btn" ${p.page <= 1 ? 'disabled' : ''} onclick="changePage(${p.page - 1})">‹</button>`;
-
-  const maxVisible = 5;
-  let startPage = Math.max(1, p.page - 2);
-  let endPage = Math.min(p.total_pages, startPage + maxVisible - 1);
-  if (endPage - startPage < maxVisible - 1) startPage = Math.max(1, endPage - maxVisible + 1);
-
-  for (let i = startPage; i <= endPage; i++) {
-    html += `<button class="page-btn ${i === p.page ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
-  }
-
-  if (endPage < p.total_pages) {
-    html += '<span style="padding:0 4px;">…</span>';
-    html += `<button class="page-btn" onclick="changePage(${p.total_pages})">${p.total_pages}</button>`;
-  }
-
-  html += `<button class="page-btn" ${p.page >= p.total_pages ? 'disabled' : ''} onclick="changePage(${p.page + 1})">›</button>`;
-  el.innerHTML = html;
-}
-
-function changePage(page) {
-  currentPage = page;
-  loadBookings();
-}
-
-function handleSearch(event) {
-  if (event.key === 'Enter') {
-    searchQuery = event.target.value.trim();
-    currentPage = 1;
-    loadBookings();
-  }
-}
-
-// ─── Booking Detail ───────────────────────────────────────────
 async function viewBooking(id) {
+  currentBookingId = id;
   showLoading('Loading booking details...');
-
+  
   try {
-    const res = await fetch(`${API_BASE}/get-booking?id=${id}`, { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/get-booking?id=${id}`, {
+      headers: { 'Authorization': `Bearer ${adminToken}` },
+    });
     const data = await res.json();
     hideLoading();
-
-    if (!res.ok) { alert(data.error || 'Failed to load booking.'); return; }
-
-    renderBookingDetail(data.booking, data.guests);
-    navigateTo('booking-detail');
-  } catch {
+    
+    if (!res.ok) {
+      alert(data.error || 'Failed to load booking.');
+      return;
+    }
+    
+    renderBookingDetails(data.booking);
+    showView('booking-details');
+  } catch (err) {
     hideLoading();
-    alert('Failed to load booking details.');
+    alert('Network error loading booking.');
   }
 }
 
-function renderBookingDetail(booking, guests) {
-  const shortId = booking.id.substring(0, 8).toUpperCase();
-  const statusClass = booking.status || 'pending';
-  const dates = parseDates(booking.preferred_dates);
-  const primaryGuest = guests.find(g => g.is_primary) || guests[0];
-  const deposit = booking.deposit_amount ? `$${(booking.deposit_amount / 100).toFixed(2)}` : '—';
-
-  document.getElementById('booking-detail-content').innerHTML = `
-    <div class="detail-header">
-      <span class="status-badge ${statusClass}">${capitalize(statusClass)}</span>
-      <span class="text-muted text-sm" style="margin-left:0.5rem;">#${shortId}</span>
-      <h1>${escapeHtml(primaryGuest?.name || 'Guest')}</h1>
-      <div class="detail-meta">
-        ${booking.phone ? `<span>${escapeHtml(booking.phone)}</span>` : ''}
-        ${booking.email ? `<span>${escapeHtml(booking.email)}</span>` : ''}
-      </div>
-      <p class="text-secondary" style="margin-top:0.25rem;">
-        Reservation for ${guests.length} guest${guests.length > 1 ? 's' : ''}${booking.occasion ? ' · ' + escapeHtml(booking.occasion) : ''}
-      </p>
-    </div>
-
-    <div class="detail-grid">
-      <div>
-        <div class="detail-section">
-          <h3>🕐 Pickup & Schedule</h3>
-          <div class="form-row">
-            <div class="detail-field">
-              <div class="detail-field-label">Pickup Location</div>
-              <div class="detail-field-value">📍 ${escapeHtml(booking.pickup_address)}</div>
-            </div>
-            <div class="detail-field">
-              <div class="detail-field-label">Preferred Dates</div>
-              <div class="detail-field-value">📅 ${dates}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="detail-section" style="margin-top:1.5rem;">
-          <h3>👥 Guest List</h3>
-          ${guests.map((g, i) => {
-            const initials = g.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
-            const bday = new Date(g.birthday).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-            return `
-              <div class="guest-list-item">
-                <div class="guest-avatar ${g.is_primary ? 'primary' : 'secondary'}">${initials}</div>
-                <div class="guest-info">
-                  <div class="guest-info-name">
-                    ${escapeHtml(g.name)}
-                    ${g.is_primary ? '<span class="primary-badge">Primary</span>' : ''}
-                  </div>
-                  <div class="guest-info-birthday">🎂 ${bday}</div>
-                </div>
-                <div class="guest-pairing">Pairing<span>${capitalize(g.beverage_pairing)}</span></div>
-                ${g.allergies ? `<div class="allergy-badge">⚠ ${escapeHtml(g.allergies)} (${g.name.split(' ')[0]})</div>` : ''}
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </div>
-
-      <div>
-        <div class="payment-card">
-          <h3>💳 Payment Status</h3>
-          <div class="payment-amount">
-            <span class="payment-amount-label">Deposit Paid</span>
-            <span class="payment-amount-value">${deposit}</span>
-          </div>
-          ${booking.stripe_payment_id ? `
-            <div class="text-sm text-muted" style="margin-top:0.5rem;">
-              Stripe: ${booking.stripe_payment_id.substring(0, 20)}…
-            </div>
-          ` : ''}
-        </div>
-      </div>
-    </div>
-  `;
+function renderBookingDetails(booking) {
+  const statusClass = `status-badge-${booking.status}`;
+  document.getElementById('detail-status').className = `status-badge ${statusClass}`;
+  document.getElementById('detail-status').textContent = booking.status;
+  
+  document.getElementById('detail-address').textContent = booking.pickup_address || 'N/A';
+  document.getElementById('detail-travel').textContent = `${booking.travel_time_minutes || 0} minutes`;
+  document.getElementById('detail-satellite').textContent = booking.satellite_confirmation ? 'Yes' : 'No';
+  
+  const dates = Array.isArray(booking.preferred_dates) ? booking.preferred_dates.join(', ') : 'N/A';
+  document.getElementById('detail-dates').textContent = dates;
+  document.getElementById('detail-phone').textContent = booking.phone || 'N/A';
+  document.getElementById('detail-email').textContent = booking.email || 'N/A';
+  
+  const guests = booking.guests || [];
+  document.getElementById('detail-guest-count').textContent = `${guests.length} guest${guests.length !== 1 ? 's' : ''}`;
+  
+  document.getElementById('detail-guests').innerHTML = guests.map(g => `
+    <tr>
+      <td>${escapeHtml(g.name)}</td>
+      <td>${escapeHtml(g.birthday)}</td>
+      <td>${g.beverage_pairing === 'alcoholic' ? '🍷 Alcoholic' : '🥤 Non-alcoholic'}</td>
+      <td>${escapeHtml(g.allergies) || 'None'}</td>
+    </tr>
+  `).join('');
+  
+  document.getElementById('detail-deposit').textContent = `$${((booking.deposit_amount || 0) / 100).toFixed(2)}`;
+  document.getElementById('detail-payment-id').textContent = booking.stripe_payment_id || 'N/A';
 }
 
-// ─── Delete Booking ───────────────────────────────────────────
-async function deleteBooking(id) {
-  if (!confirm('Are you sure you want to delete this booking? This cannot be undone.')) return;
-
-  showLoading('Deleting booking...');
-
+async function updateBookingStatus(status) {
+  if (!currentBookingId) return;
+  
+  showLoading('Updating booking...');
+  
   try {
-    const res = await fetch(`${API_BASE}/delete-booking?id=${id}`, {
-      method: 'DELETE',
-      headers: authHeaders(),
+    const res = await fetch(`${API_BASE}/update-booking`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ id: currentBookingId, status }),
     });
+    
     hideLoading();
+    
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error || 'Failed to update booking.');
+      return;
+    }
+    
+    viewBooking(currentBookingId);
+  } catch (err) {
+    hideLoading();
+    alert('Network error updating booking.');
+  }
+}
 
+async function deleteBooking() {
+  if (!currentBookingId) return;
+  if (!confirm('Are you sure you want to delete this booking?')) return;
+  
+  showLoading('Deleting booking...');
+  
+  try {
+    const res = await fetch(`${API_BASE}/delete-booking`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ id: currentBookingId }),
+    });
+    
+    hideLoading();
+    
     if (!res.ok) {
       const data = await res.json();
       alert(data.error || 'Failed to delete booking.');
       return;
     }
-
-    loadBookings();
-  } catch {
+    
+    showView('bookings');
+  } catch (err) {
     hideLoading();
-    alert('Failed to delete booking.');
+    alert('Network error deleting booking.');
   }
 }
 
-// ─── Manage Dates (Calendar) ──────────────────────────────────
-function initAdminCalendar() {
-  const now = new Date();
-  adminCalMonth = now.getMonth();
-  adminCalYear = now.getFullYear();
-  loadAdminDates();
-}
-
-async function loadAdminDates() {
+// ─── Dates Management ─────────────────────────────────────────
+async function loadDates() {
+  renderAdminCalendar();
+  
   try {
-    const params = new URLSearchParams({ month: adminCalMonth + 1, year: adminCalYear });
-    const res = await fetch(`${API_BASE}/manage-dates?${params}`, { headers: authHeaders() });
-    const data = await res.json();
-
-    adminDatesCache = {};
-    (data.dates || []).forEach((d) => {
-      const key = d.date.substring(0, 10);
-      adminDatesCache[key] = d;
+    const res = await fetch(`${API_BASE}/manage-dates`, {
+      headers: { 'Authorization': `Bearer ${adminToken}` },
     });
-
-    renderAdminCalendar();
-  } catch {
-    document.getElementById('admin-calendar-card').innerHTML = '<p class="text-secondary" style="padding:2rem;text-align:center;">Failed to load dates.</p>';
+    const data = await res.json();
+    
+    if (res.ok) {
+      renderDatesList(data.dates || []);
+    }
+  } catch (err) {
+    console.error('Error loading dates:', err);
   }
 }
 
 function renderAdminCalendar() {
-  const card = document.getElementById('admin-calendar-card');
-  const daysInMonth = new Date(adminCalYear, adminCalMonth + 1, 0).getDate();
-  const firstDow = new Date(adminCalYear, adminCalMonth, 1).getDay();
+  const cal = document.getElementById('admin-calendar');
+  const daysInMonth = new Date(adminCalendarYear, adminCalendarMonth + 1, 0).getDate();
+  const firstDow = new Date(adminCalendarYear, adminCalendarMonth, 1).getDay();
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
 
   let html = `
-    <div class="admin-calendar-header">
-      <div style="display:flex;align-items:center;gap:0.75rem;">
-        <button class="calendar-nav" onclick="adminPrevMonth()">‹</button>
-        <span class="calendar-title">${monthNames[adminCalMonth]} ${adminCalYear}</span>
-        <button class="calendar-nav" onclick="adminNextMonth()">›</button>
-      </div>
-      <div class="view-toggle">
-        <button class="view-toggle-btn active">Month View</button>
-        <button class="view-toggle-btn">Week View</button>
-      </div>
+    <div class="calendar-header">
+      <button class="calendar-nav" onclick="adminPrevMonth()">‹</button>
+      <div class="calendar-title">${monthNames[adminCalendarMonth]} ${adminCalendarYear}</div>
+      <button class="calendar-nav" onclick="adminNextMonth()">›</button>
     </div>
     <div class="calendar-grid">
       <div class="calendar-dow">Sun</div><div class="calendar-dow">Mon</div>
@@ -371,192 +296,72 @@ function renderAdminCalendar() {
   }
 
   for (let d = 1; d <= daysInMonth; d++) {
-    const date = new Date(adminCalYear, adminCalMonth, d);
-    const dateStr = formatDateStr(date);
-    const dateData = adminDatesCache[dateStr];
-    const isToday = date.getTime() === today.getTime();
-    const isSelected = selectedAdminDate === dateStr;
-
-    let classes = 'calendar-day calendar-day-admin';
-    if (isToday) classes += ' today';
-    if (isSelected) classes += ' selected';
-
-    let dots = '';
-    if (dateData) {
-      if (dateData.is_open) dots += '<span class="dot open"></span>';
-      dots += '<span class="dot bookings"></span>';
-    }
-
-    html += `
-      <div class="${classes}" onclick="selectAdminDate('${dateStr}')">
-        ${d}
-        ${dots ? `<div class="dot-indicator">${dots}</div>` : ''}
-      </div>
-    `;
+    const date = new Date(adminCalendarYear, adminCalendarMonth, d);
+    const dateStr = formatDate(date);
+    html += `<div class="calendar-day" onclick="toggleDateStatus('${dateStr}')">${d}</div>`;
   }
 
   html += '</div>';
-  card.innerHTML = html;
+  cal.innerHTML = html;
 }
 
 function adminPrevMonth() {
-  adminCalMonth--;
-  if (adminCalMonth < 0) { adminCalMonth = 11; adminCalYear--; }
-  loadAdminDates();
+  adminCalendarMonth--;
+  if (adminCalendarMonth < 0) { adminCalendarMonth = 11; adminCalendarYear--; }
+  renderAdminCalendar();
 }
 
 function adminNextMonth() {
-  adminCalMonth++;
-  if (adminCalMonth > 11) { adminCalMonth = 0; adminCalYear++; }
-  loadAdminDates();
-}
-
-function selectAdminDate(dateStr) {
-  selectedAdminDate = dateStr;
+  adminCalendarMonth++;
+  if (adminCalendarMonth > 11) { adminCalendarMonth = 0; adminCalendarYear++; }
   renderAdminCalendar();
-  renderDayDetails(dateStr);
 }
 
-function renderDayDetails(dateStr) {
-  const card = document.getElementById('day-details-card');
-  const date = new Date(dateStr + 'T00:00:00');
-  const dateData = adminDatesCache[dateStr];
-  const isOpen = dateData ? dateData.is_open : false;
-  const maxGuests = dateData ? dateData.max_guests : 45;
-  const isSpecial = dateData ? dateData.is_special_event : false;
+async function toggleDateStatus(dateStr) {
+  try {
+    const res = await fetch(`${API_BASE}/manage-dates`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ date: dateStr, is_open: true }),
+    });
+    
+    if (res.ok) {
+      loadDates();
+    }
+  } catch (err) {
+    console.error('Error toggling date:', err);
+  }
+}
 
-  const monthName = date.toLocaleDateString('en-US', { month: 'long' });
-  const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
-  const dayNum = date.getDate().toString().padStart(2, '0');
-
-  card.innerHTML = `
-    <h3>
-      Day Details
-      <span class="today-badge">
-        ${isToday(dateStr) ? 'TODAY' : ''}
+function renderDatesList(dates) {
+  const list = document.getElementById('dates-list');
+  
+  if (dates.length === 0) {
+    list.innerHTML = '<p class="empty-state">No dates configured. Click on calendar dates to add them.</p>';
+    return;
+  }
+  
+  list.innerHTML = dates.map(d => `
+    <div class="setting-item">
+      <div>
+        <div class="setting-label">${d.date}</div>
+      </div>
+      <span class="status-badge ${d.is_open ? 'status-badge-confirmed' : 'status-badge-cancelled'}">
+        ${d.is_open ? 'Open' : 'Closed'}
       </span>
-    </h3>
-
-    <div class="day-display">
-      <div class="day-display-month">${monthName}</div>
-      <div class="day-display-date">${dayNum}</div>
-      <div class="day-display-day">${dayName}</div>
     </div>
-
-    <div class="day-detail-row">
-      <div class="label-group">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <div>
-          <div class="label-text">Availability Status</div>
-          <div class="label-sub">Currently ${isOpen ? 'accepting' : 'not accepting'} bookings</div>
-        </div>
-      </div>
-      <label class="toggle-switch">
-        <input type="checkbox" ${isOpen ? 'checked' : ''} onchange="toggleDateAvailability('${dateStr}', this.checked)">
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-
-    <div class="day-detail-row">
-      <div class="label-group">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <div>
-          <div class="label-text">Reservation Limit</div>
-          <div class="label-sub">Maximum ${maxGuests} guests</div>
-        </div>
-      </div>
-      <button class="edit-link">Edit</button>
-    </div>
-
-    <div class="day-detail-row">
-      <div class="label-group">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-        <div>
-          <div class="label-text">Special Event</div>
-        </div>
-      </div>
-      <label class="toggle-switch">
-        <input type="checkbox" ${isSpecial ? 'checked' : ''} onchange="toggleSpecialEvent('${dateStr}', this.checked)">
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-
-    <button class="btn btn-primary btn-block" style="margin-top:1.25rem;" onclick="applyDateChanges('${dateStr}')">Apply Changes to Date</button>
-    <button class="btn btn-outline btn-block" style="margin-top:0.5rem;">View Bookings</button>
-  `;
-}
-
-async function toggleDateAvailability(dateStr, isOpen) {
-  try {
-    await fetch(`${API_BASE}/manage-dates`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ date: dateStr, is_open: isOpen }),
-    });
-    loadAdminDates();
-  } catch {
-    alert('Failed to update date.');
-  }
-}
-
-async function toggleSpecialEvent(dateStr, isSpecial) {
-  try {
-    await fetch(`${API_BASE}/manage-dates`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ date: dateStr, is_special_event: isSpecial }),
-    });
-    loadAdminDates();
-  } catch {
-    alert('Failed to update date.');
-  }
-}
-
-async function applyDateChanges(dateStr) {
-  const card = document.getElementById('day-details-card');
-  const isOpen = card.querySelector('input[type="checkbox"]')?.checked || false;
-
-  try {
-    await fetch(`${API_BASE}/manage-dates`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ date: dateStr, is_open: isOpen }),
-    });
-    loadAdminDates();
-    selectAdminDate(dateStr);
-  } catch {
-    alert('Failed to save changes.');
-  }
+  `).join('');
 }
 
 // ─── Utilities ────────────────────────────────────────────────
-function formatDateStr(date) {
+function formatDate(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
-}
-
-function parseDates(dates) {
-  try {
-    const arr = typeof dates === 'string' ? JSON.parse(dates) : dates;
-    if (!Array.isArray(arr)) return '—';
-    return arr.map(d => {
-      const parts = d.split('-');
-      return new Date(parts[0], parts[1]-1, parts[2]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    }).join(', ');
-  } catch {
-    return '—';
-  }
-}
-
-function isToday(dateStr) {
-  const today = new Date();
-  return formatDateStr(today) === dateStr;
-}
-
-function capitalize(str) {
-  return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
 }
 
 function escapeHtml(str) {

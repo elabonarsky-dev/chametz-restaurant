@@ -3,215 +3,281 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Portal — Restaurant Bookings</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <title>Admin Portal — Restaurant Booking</title>
   <link rel="stylesheet" href="../css/style.css">
   <link rel="stylesheet" href="../css/admin.css">
 </head>
 <body>
-  <!-- ==================== LOGIN OVERLAY ==================== -->
-  <div id="login-overlay" class="loading-overlay" style="background:var(--c-bg);">
-    <div class="card" style="max-width:380px; width:100%; text-align:center;">
-      <h2 style="margin-bottom:0.5rem;">Admin Portal</h2>
-      <p class="text-secondary text-sm" style="margin-bottom:1.5rem;">Enter your admin credentials to continue.</p>
-      <div class="form-group" style="text-align:left;">
+  <!-- AUTH MODAL -->
+  <div class="auth-modal" id="auth-modal">
+    <div class="auth-card">
+      <h1 class="auth-title">Admin Portal</h1>
+      <p class="auth-desc">Enter your admin credentials to continue</p>
+      <div class="form-group">
         <label class="form-label">Admin Secret</label>
-        <input type="password" id="admin-secret-input" class="form-input" placeholder="Enter admin secret key">
+        <input type="password" class="form-input" id="admin-secret" placeholder="Enter admin secret">
       </div>
-      <div id="login-error" class="alert alert-error hidden" style="margin-bottom:1rem;"></div>
-      <button class="btn btn-primary btn-block" onclick="adminLogin()">Sign In</button>
+      <div id="auth-error" class="alert alert-error hidden"></div>
+      <button class="btn btn-primary btn-block" onclick="authenticate()">Sign In</button>
     </div>
   </div>
 
-  <!-- ==================== ADMIN LAYOUT ==================== -->
+  <!-- MAIN LAYOUT -->
   <div class="admin-layout hidden" id="admin-layout">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-brand">
-        <div class="sidebar-brand-icon">🍽</div>
-        <div>
-          <h3>Admin Portal</h3>
-          <small>Venue Management</small>
-        </div>
-      </div>
-      <ul class="sidebar-nav">
-        <li>
-          <a href="#" class="active" data-page="bookings" onclick="navigateTo('bookings')">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            Bookings
-          </a>
-        </li>
-        <li>
-          <a href="#" data-page="dates" onclick="navigateTo('dates')">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/></svg>
-            Available Dates
-          </a>
-        </li>
-        <li>
-          <a href="#" data-page="settings" onclick="navigateTo('settings')">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            Settings
-          </a>
-        </li>
-      </ul>
+    <!-- SIDEBAR -->
+    <aside class="admin-sidebar">
+      <div class="admin-logo">Aster & Ivy</div>
+      <nav class="admin-nav">
+        <a href="#" class="admin-nav-link active" data-view="bookings" onclick="showView('bookings', this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+          Bookings
+        </a>
+        <a href="#" class="admin-nav-link" data-view="dates" onclick="showView('dates', this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Manage Dates
+        </a>
+        <a href="#" class="admin-nav-link" data-view="settings" onclick="showView('settings', this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6M4.22 4.22l4.24 4.24m7.08 7.08l4.24 4.24M1 12h6m10 0h6M4.22 19.78l4.24-4.24m7.08-7.08l4.24-4.24"/>
+          </svg>
+          Settings
+        </a>
+      </nav>
     </aside>
 
-    <!-- Main Area -->
+    <!-- MAIN CONTENT -->
     <main class="admin-main">
-      <div class="admin-topbar">
-        <div class="admin-search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" id="search-input" placeholder="Search bookings..." onkeyup="handleSearch(event)">
+      <!-- BOOKINGS VIEW -->
+      <div id="view-bookings">
+        <div class="admin-page-header">
+          <h1 class="admin-page-title">Bookings</h1>
+          <button class="btn btn-outline" onclick="loadBookings()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+            Refresh
+          </button>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="window.open('/', '_blank')">+ New Booking</button>
+
+        <div class="admin-card">
+          <table class="admin-table" id="bookings-table">
+            <thead>
+              <tr>
+                <th>Guest Name</th>
+                <th>Phone</th>
+                <th>Dates</th>
+                <th>Guests</th>
+                <th>Status</th>
+                <th>Deposit</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="bookings-tbody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+          <div id="bookings-empty" class="empty-state hidden">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+            <p>No bookings yet</p>
+          </div>
+        </div>
       </div>
 
-      <div class="admin-content">
-        <!-- Bookings Dashboard Page -->
-        <div id="page-bookings">
-          <h1 style="margin-bottom:0.25rem;">Bookings Dashboard</h1>
-          <p class="text-secondary" style="margin-bottom:1.5rem;">Comprehensive overview of your restaurant's reservations and guest logistics.</p>
-
-          <div class="stats-grid" id="stats-grid">
-            <div class="stat-card">
-              <div class="stat-card-header">
-                <span class="stat-label">Total Bookings</span>
-              </div>
-              <div class="stat-value" id="stat-total">—</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-card-header">
-                <span class="stat-label">Pending Deposits</span>
-              </div>
-              <div class="stat-value" id="stat-pending">—</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-card-header">
-                <span class="stat-label">New Today</span>
-              </div>
-              <div class="stat-value" id="stat-today">—</div>
-            </div>
-          </div>
-
-          <div class="data-table-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Booking ID</th>
-                  <th>Pickup Address</th>
-                  <th>Preferred Dates</th>
-                  <th>Guests</th>
-                  <th>Status</th>
-                  <th>Created Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="bookings-tbody">
-                <tr><td colspan="7" style="text-align:center;padding:2rem;">Loading...</td></tr>
-              </tbody>
-            </table>
-            <div class="table-footer">
-              <span id="showing-info">Showing 0 of 0</span>
-              <div class="pagination" id="pagination"></div>
-            </div>
+      <!-- BOOKING DETAILS VIEW -->
+      <div id="view-booking-details" class="hidden">
+        <div class="admin-page-header">
+          <button class="btn-back" onclick="showView('bookings')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Back to Bookings
+          </button>
+          <div class="action-buttons">
+            <button class="btn btn-outline" onclick="updateBookingStatus('confirmed')">Confirm</button>
+            <button class="btn btn-danger" onclick="deleteBooking()">Delete</button>
           </div>
         </div>
 
-        <!-- Booking Detail Page (hidden by default) -->
-        <div id="page-booking-detail" class="hidden">
-          <div style="margin-bottom:1rem;">
-            <button class="btn btn-outline btn-sm" onclick="navigateTo('bookings')">← Back to Bookings</button>
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h2 class="admin-card-title">Booking Details</h2>
+            <span class="status-badge" id="detail-status"></span>
           </div>
-          <div id="booking-detail-content">
-            <!-- Filled by JS -->
-          </div>
-        </div>
-
-        <!-- Available Dates Page -->
-        <div id="page-dates" class="hidden">
-          <h1 style="margin-bottom:0.25rem;">Dining Schedule</h1>
-          <p class="text-secondary" style="margin-bottom:1.5rem;">Manage open and closed dates for your restaurant's reservations across the season.</p>
-          <div class="admin-calendar">
+          <div class="booking-detail-grid">
             <div>
-              <div class="card" id="admin-calendar-card">
-                <!-- Calendar rendered by JS -->
+              <div class="detail-item">
+                <div class="detail-label">Pickup Address</div>
+                <div class="detail-value" id="detail-address"></div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Travel Time</div>
+                <div class="detail-value" id="detail-travel"></div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Satellite Parking</div>
+                <div class="detail-value" id="detail-satellite"></div>
               </div>
             </div>
             <div>
-              <div class="day-details-card" id="day-details-card">
-                <h3>Day Details</h3>
-                <p class="text-secondary text-sm">Select a date on the calendar to view details.</p>
+              <div class="detail-item">
+                <div class="detail-label">Preferred Dates</div>
+                <div class="detail-value" id="detail-dates"></div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Contact Phone</div>
+                <div class="detail-value" id="detail-phone"></div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Contact Email</div>
+                <div class="detail-value" id="detail-email"></div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Settings Page -->
-        <div id="page-settings" class="hidden">
-          <h1 style="font-family:var(--font-serif);margin-bottom:0.25rem;">Settings</h1>
-          <p class="text-secondary" style="margin-bottom:2rem;">Manage your restaurant profile, notifications, and security preferences.</p>
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h2 class="admin-card-title">Guest List</h2>
+            <span id="detail-guest-count"></span>
+          </div>
+          <table class="guest-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Birthday</th>
+                <th>Beverage</th>
+                <th>Allergies</th>
+              </tr>
+            </thead>
+            <tbody id="detail-guests">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
 
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h2 class="admin-card-title">Payment</h2>
+          </div>
+          <div class="booking-detail-grid">
+            <div class="detail-item">
+              <div class="detail-label">Deposit Amount</div>
+              <div class="detail-value" id="detail-deposit"></div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Payment ID</div>
+              <div class="detail-value" id="detail-payment-id"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DATES VIEW -->
+      <div id="view-dates" class="hidden">
+        <div class="admin-page-header">
+          <h1 class="admin-page-title">Manage Dates</h1>
+        </div>
+
+        <div class="admin-card admin-calendar">
+          <div id="admin-calendar">
+            <!-- Calendar rendered by JS -->
+          </div>
+        </div>
+
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h2 class="admin-card-title">Date Status</h2>
+          </div>
+          <div id="dates-list">
+            <!-- Dates list rendered by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS VIEW -->
+      <div id="view-settings" class="hidden">
+        <div class="admin-page-header">
+          <h1 class="admin-page-title">Settings</h1>
+        </div>
+
+        <div class="admin-card">
           <div class="settings-section">
-            <h2>🏪 General Venue Settings</h2>
-            <div class="card">
-              <div class="venue-banner"></div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Venue Name</label>
-                  <input type="text" class="form-input" value="La Terrace Bistro">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Cuisine Type</label>
-                  <input type="text" class="form-input" value="Modern European">
-                </div>
+            <h3 class="settings-section-title">Notifications</h3>
+            <div class="setting-item">
+              <div>
+                <div class="setting-label">Email Notifications</div>
+                <div class="setting-desc">Receive email for new bookings</div>
               </div>
-              <div class="form-group">
-                <label class="form-label">Address</label>
-                <input type="text" class="form-input" value="124 Gastronomy Ave, Culinary District, NY 10012">
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-item">
+              <div>
+                <div class="setting-label">SMS Notifications</div>
+                <div class="setting-desc">Receive SMS for new bookings</div>
               </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Contact Email</label>
-                  <input type="email" class="form-input" value="hello@laterrace.com">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Phone Number</label>
-                  <input type="tel" class="form-input" value="+1 (555) 982-3412">
-                </div>
-              </div>
-              <div style="text-align:right; margin-top:1rem;">
-                <button class="btn btn-primary btn-sm">Save Venue Changes</button>
-              </div>
+              <label class="toggle-switch">
+                <input type="checkbox">
+                <span class="toggle-slider"></span>
+              </label>
             </div>
           </div>
 
           <div class="settings-section">
-            <h2>👤 Account Management</h2>
-            <div class="card">
-              <div class="form-group">
-                <label class="form-label">Current Password</label>
-                <input type="password" class="form-input" value="********">
+            <h3 class="settings-section-title">Booking Settings</h3>
+            <div class="setting-item">
+              <div>
+                <div class="setting-label">Auto-confirm Bookings</div>
+                <div class="setting-desc">Automatically confirm new bookings</div>
               </div>
-              <div class="form-group">
-                <label class="form-label">New Password</label>
-                <input type="password" class="form-input" placeholder="Enter new password">
+              <label class="toggle-switch">
+                <input type="checkbox">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-item">
+              <div>
+                <div class="setting-label">Max Guests per Booking</div>
+                <div class="setting-desc">Maximum number of guests allowed</div>
               </div>
-              <div class="form-group">
-                <label class="form-label">Confirm New Password</label>
-                <input type="password" class="form-input" placeholder="Confirm new password">
-              </div>
-              <button class="btn btn-primary btn-block" style="margin-top:0.5rem; background:var(--c-warning); border-color:var(--c-warning);">Update Password</button>
+              <input type="number" class="form-input" value="10" style="width: 80px;">
             </div>
           </div>
+
+          <div class="settings-section">
+            <h3 class="settings-section-title">Deposit Settings</h3>
+            <div class="setting-item">
+              <div>
+                <div class="setting-label">Deposit Amount (per guest)</div>
+                <div class="setting-desc">Amount required per guest</div>
+              </div>
+              <input type="text" class="form-input" value="$50.00" style="width: 100px;">
+            </div>
+          </div>
+
+          <button class="btn btn-primary">Save Settings</button>
         </div>
       </div>
     </main>
   </div>
 
+  <!-- LOADING -->
   <div class="loading-overlay hidden" id="loading">
     <div class="spinner"></div>
-    <span class="text-secondary" id="loading-text">Loading...</span>
+    <span class="loading-text" id="loading-text">Loading...</span>
   </div>
 
   <script src="../js/admin.js"></script>

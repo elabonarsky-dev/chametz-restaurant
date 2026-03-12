@@ -4,7 +4,6 @@
 
 const API_BASE = '/api';
 
-// ─── State ────────────────────────────────────────────────────
 const state = {
   currentStep: 1,
   address: '',
@@ -32,13 +31,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ─── Step Navigation ──────────────────────────────────────────
 function goToStep(step) {
-  for (let i = 1; i <= 5; i++) {
-    const el = document.getElementById(`step-${i}`);
-    if (el) el.classList.add('hidden');
-  }
-  document.getElementById('step-1b')?.classList.add('hidden');
-
-  document.getElementById(`step-${step}`)?.classList.remove('hidden');
+  // Hide all steps
+  document.querySelectorAll('.main-content').forEach(el => el.classList.add('hidden'));
+  
+  // Show the target step
+  const stepEl = document.getElementById(`step-${step}`);
+  if (stepEl) stepEl.classList.remove('hidden');
+  
   state.currentStep = step;
   updateStepper(step);
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -51,23 +50,22 @@ function updateStepper(activeStep) {
   document.querySelectorAll('.stepper-step').forEach((el) => {
     const s = parseInt(el.dataset.step);
     el.classList.remove('active', 'completed');
-    if (s === activeStep) el.classList.add('active');
-    else if (s < activeStep) el.classList.add('completed');
+    const circle = el.querySelector('.stepper-circle');
+    
+    if (s < activeStep) {
+      el.classList.add('completed');
+      circle.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+    } else if (s === activeStep) {
+      el.classList.add('active');
+      circle.textContent = s;
+    } else {
+      circle.textContent = s;
+    }
   });
+  
   document.querySelectorAll('.stepper-line').forEach((el) => {
     const l = parseInt(el.dataset.line);
     el.classList.toggle('completed', l < activeStep);
-  });
-  document.querySelectorAll('.stepper-step.completed .stepper-circle').forEach((el) => {
-    el.innerHTML = '✓';
-  });
-  document.querySelectorAll('.stepper-step:not(.completed) .stepper-circle').forEach((el) => {
-    if (!el.closest('.stepper-step').classList.contains('active') && !el.closest('.stepper-step').classList.contains('completed')) {
-      el.textContent = el.closest('.stepper-step').dataset.step;
-    }
-  });
-  document.querySelectorAll('.stepper-step.active .stepper-circle').forEach((el) => {
-    el.textContent = el.closest('.stepper-step').dataset.step;
   });
 }
 
@@ -112,72 +110,23 @@ async function checkAddress() {
 
 function showServiceAreaResult(data) {
   document.getElementById('step-1').classList.add('hidden');
-  const container = document.getElementById('step-1b');
-  const card = container.querySelector('.card');
-
+  
   if (data.within_service_area) {
-    card.innerHTML = `
-      <div class="service-notice">
-        <div class="service-notice-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--c-success)" stroke-width="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-          </svg>
-        </div>
-        <h2>Booking Availability</h2>
-        <p class="text-secondary">Confirming your eligibility for our exclusive table-to-door pick up service.</p>
-
-        <div class="detail-section" style="text-align:left; max-width:440px; margin:0 auto;">
-          <div style="display:flex;align-items:center;gap:0.5rem;color:var(--c-success);font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.75rem;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            Service Available
-          </div>
-          <h3 style="margin-bottom:0.5rem;">Within 1 Hour Arrival</h3>
-          <p class="text-secondary" style="font-size:0.9rem;">Good news! You are within our priority pick up service area. Our shuttle is currently active in your neighborhood.</p>
-          <button class="btn btn-primary btn-lg" style="margin-top:1.25rem;" onclick="goToStep(2)">
-            Continue Booking →
-          </button>
-        </div>
-      </div>
-    `;
+    document.getElementById('step-1b-within').classList.remove('hidden');
   } else {
-    const sp = data.satellite_parking;
-    card.innerHTML = `
-      <div class="service-notice">
-        <div class="service-notice-icon" style="background:#F5F5F5;">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--c-text-secondary)" stroke-width="2">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-          </svg>
-        </div>
-        <h2>Pickup Range Notification</h2>
-        <p>You are outside our standard pickup range. Would you be comfortable meeting at a satellite parking lot?</p>
-
-        <div class="satellite-card">
-          <div class="satellite-card-icon">📍</div>
-          <h4>${sp.name}</h4>
-          <p>${sp.address}<br>${sp.city}, ${sp.state}</p>
-        </div>
-
-        <div class="notice-actions">
-          <button class="btn btn-primary" onclick="confirmSatellite()">Yes, continue booking</button>
-          <button class="btn btn-outline" onclick="cancelSatellite()">No, cancel booking</button>
-        </div>
-      </div>
-    `;
+    document.getElementById('step-1b-outside').classList.remove('hidden');
   }
-
-  container.classList.remove('hidden');
 }
 
 function confirmSatellite() {
   state.satelliteConfirmed = true;
+  document.getElementById('step-1b-outside').classList.add('hidden');
   goToStep(2);
 }
 
 function cancelSatellite() {
-  document.getElementById('step-1b').classList.add('hidden');
+  document.getElementById('step-1b-outside').classList.add('hidden');
   document.getElementById('step-1').classList.remove('hidden');
-  state.currentStep = 1;
-  updateStepper(1);
 }
 
 // ─── Step 2: Calendar ─────────────────────────────────────────
@@ -211,12 +160,10 @@ function renderCalendar() {
     const dateStr = formatDate(date);
     const isSelected = state.selectedDates.includes(dateStr);
     const isPast = date < today;
-    const isToday = date.getTime() === today.getTime();
 
     let classes = 'calendar-day';
     if (isPast) classes += ' disabled';
     if (isSelected) classes += ' selected';
-    if (isToday) classes += ' today';
 
     html += `<div class="${classes}" onclick="toggleDate('${dateStr}', ${isPast})">${d}</div>`;
   }
@@ -294,7 +241,6 @@ function addGuest() {
 function removeGuest(index) {
   if (state.guests.length <= 1) return;
   state.guests.splice(index, 1);
-  if (!state.guests.some(g => g.is_primary)) state.guests[0].is_primary = true;
   renderGuestCards();
 }
 
@@ -311,7 +257,11 @@ function renderGuestCards() {
             <div class="guest-card-title">Guest ${i + 1}${isPrimary ? ' (Primary)' : ''}</div>
             ${isPrimary ? '<div class="guest-card-subtitle">Main contact person</div>' : ''}
           </div>
-          ${!isPrimary ? `<button class="guest-remove-btn" onclick="removeGuest(${i})" title="Remove guest">🗑</button>` : ''}
+          ${!isPrimary ? `<button class="guest-remove-btn" onclick="removeGuest(${i})">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+          </button>` : ''}
         </div>
 
         <div class="form-row">
@@ -321,7 +271,7 @@ function renderGuestCards() {
           </div>
           <div class="form-group">
             <label class="form-label">Birthday <span class="required">*</span></label>
-            <input type="date" class="form-input" value="${guest.birthday}" onchange="updateGuest(${i}, 'birthday', this.value)">
+            <input type="text" class="form-input" placeholder="mm/dd/yyyy" value="${guest.birthday}" onchange="updateGuest(${i}, 'birthday', this.value)">
           </div>
         </div>
 
@@ -341,14 +291,14 @@ function renderGuestCards() {
         <div class="form-group">
           <label class="form-label">Beverage Pairing <span class="required">*</span></label>
           <div class="toggle-group">
-            <button class="toggle-btn ${guest.beverage_pairing === 'alcoholic' ? 'active' : ''}" onclick="updateGuest(${i}, 'beverage_pairing', 'alcoholic')">
+            <button type="button" class="toggle-btn ${guest.beverage_pairing === 'alcoholic' ? 'active' : ''}" onclick="updateGuest(${i}, 'beverage_pairing', 'alcoholic')">
               🍷 Alcoholic
             </button>
-            <button class="toggle-btn ${guest.beverage_pairing === 'non-alcoholic' ? 'active' : ''}" onclick="updateGuest(${i}, 'beverage_pairing', 'non-alcoholic')">
+            <button type="button" class="toggle-btn ${guest.beverage_pairing === 'non-alcoholic' ? 'active' : ''}" onclick="updateGuest(${i}, 'beverage_pairing', 'non-alcoholic')">
               🥤 Non-alcoholic
             </button>
           </div>
-          <div id="age-warning-${i}" class="form-error hidden"></div>
+          <div id="age-warning-${i}" class="alert alert-error hidden mt-1"></div>
         </div>
 
         <div class="form-group">
@@ -363,14 +313,13 @@ function renderGuestCards() {
 function updateGuest(index, field, value) {
   state.guests[index][field] = value;
 
-  // Age check for beverage pairing
   if (field === 'beverage_pairing' || field === 'birthday') {
     const guest = state.guests[index];
     const warningEl = document.getElementById(`age-warning-${index}`);
     if (warningEl && guest.birthday && guest.beverage_pairing === 'alcoholic') {
       const age = calcAge(guest.birthday);
-      if (age < 21) {
-        warningEl.textContent = `Guest must be 21 or older for alcoholic pairing (current age: ${age}). Switching to non-alcoholic.`;
+      if (age >= 0 && age < 21) {
+        warningEl.textContent = `Guest must be 21 or older for alcoholic pairing. Switching to non-alcoholic.`;
         warningEl.classList.remove('hidden');
         state.guests[index].beverage_pairing = 'non-alcoholic';
         setTimeout(() => renderGuestCards(), 100);
@@ -383,7 +332,20 @@ function updateGuest(index, field, value) {
 }
 
 function calcAge(birthday) {
-  const dob = new Date(birthday);
+  const parts = birthday.includes('/') ? birthday.split('/') : birthday.split('-');
+  let dob;
+  if (parts.length === 3) {
+    if (birthday.includes('/')) {
+      dob = new Date(parts[2], parts[0] - 1, parts[1]);
+    } else {
+      dob = new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+  } else {
+    return -1;
+  }
+  
+  if (isNaN(dob.getTime())) return -1;
+  
   const today = new Date();
   let age = today.getFullYear() - dob.getFullYear();
   const m = today.getMonth() - dob.getMonth();
@@ -400,7 +362,8 @@ function validateAndContinueToPayment() {
     if (!g.birthday) errors.push(`Guest ${i+1}: Birthday is required.`);
     if (i === 0 && !g.phone) errors.push('Primary guest: Phone number is required.');
     if (i === 0 && !g.email) errors.push('Primary guest: Email is required.');
-    if (g.birthday && g.beverage_pairing === 'alcoholic' && calcAge(g.birthday) < 21) {
+    const age = calcAge(g.birthday);
+    if (age >= 0 && g.beverage_pairing === 'alcoholic' && age < 21) {
       errors.push(`Guest ${i+1}: Must be 21+ for alcoholic beverage pairing.`);
     }
   });
@@ -413,7 +376,7 @@ function validateAndContinueToPayment() {
   goToStep(4);
 }
 
-// ─── Step 4: Payment (Stripe) ─────────────────────────────────
+// ─── Step 4: Payment ─────────────────────────────────────────
 async function initPayment() {
   const guestCount = state.guests.length;
   const total = guestCount * 50;
@@ -422,7 +385,6 @@ async function initPayment() {
   document.getElementById('payment-total').textContent = `$${total.toFixed(2)}`;
 
   if (!stripe) {
-    // Stripe publishable key will be set during deployment
     const stripeKeyMeta = document.querySelector('meta[name="stripe-publishable-key"]');
     const stripeKey = stripeKeyMeta ? stripeKeyMeta.content : 'pk_test_placeholder';
     stripe = Stripe(stripeKey);
@@ -458,7 +420,12 @@ async function initPayment() {
 
     cardElement.on('change', (event) => {
       const display = document.getElementById('card-errors');
-      display.textContent = event.error ? event.error.message : '';
+      if (event.error) {
+        display.textContent = event.error.message;
+        display.classList.remove('hidden');
+      } else {
+        display.classList.add('hidden');
+      }
     });
   } catch (err) {
     hideLoading();
@@ -481,7 +448,7 @@ async function handlePayment() {
 
     if (error) {
       hideLoading();
-      document.getElementById('card-errors').textContent = error.message;
+      showError('card-errors', error.message);
       btn.disabled = false;
       btn.innerHTML = '🔒 Pay Deposit & Confirm';
       return;
@@ -492,7 +459,7 @@ async function handlePayment() {
     }
   } catch (err) {
     hideLoading();
-    document.getElementById('card-errors').textContent = 'Payment failed. Please try again.';
+    showError('card-errors', 'Payment failed. Please try again.');
     btn.disabled = false;
     btn.innerHTML = '🔒 Pay Deposit & Confirm';
   }
@@ -547,7 +514,7 @@ function showConfirmation() {
   document.getElementById('confirm-dates').textContent = state.selectedDates.map(d => {
     const parts = d.split('-');
     return new Date(parts[0], parts[1]-1, parts[2]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  }).join(',  ');
+  }).join(', ');
   document.getElementById('confirm-guests').textContent = `${state.guests.length} Guest${state.guests.length > 1 ? 's' : ''}`;
   goToStep(5);
 }

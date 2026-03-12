@@ -4,16 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Restaurant Reservation</title>
-  <!-- Configure your Stripe publishable key here -->
   <meta name="stripe-publishable-key" content="pk_test_YOUR_STRIPE_PUBLISHABLE_KEY">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div class="booking-page">
-    <!-- ==================== STEPPER ==================== -->
-    <div class="container">
+    <!-- STEPPER -->
+    <div class="stepper-wrapper">
       <nav class="stepper" id="stepper">
         <div class="stepper-step active" data-step="1">
           <div class="stepper-circle">1</div>
@@ -42,187 +39,289 @@
       </nav>
     </div>
 
-    <!-- ==================== STEP 1: PICKUP ADDRESS ==================== -->
-    <section class="container" id="step-1">
-      <div class="card" style="max-width: 600px; margin: 0 auto;">
-        <div class="page-header" style="text-align:left;">
-          <h1>Enter Pick up Address</h1>
-        </div>
+    <!-- STEP 1: PICKUP ADDRESS -->
+    <section class="main-content" id="step-1">
+      <div class="card">
+        <h1 class="page-title">Enter Pick up Address</h1>
 
         <div class="form-group">
           <label class="form-label">Street Address</label>
-          <div style="position:relative;">
-            <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--c-text-muted);">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <div class="input-with-icon">
+            <span class="input-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
             </span>
-            <input type="text" id="pickup-address" class="form-input" placeholder="e.g. 123 Gourmet St, Culinary City" style="padding-left:36px;">
+            <input type="text" id="pickup-address" class="form-input" placeholder="e.g. 123 Gourmet St, Culinary City">
           </div>
         </div>
 
-        <div class="form-hint">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-          <span>We provide pick up and drop off for experiences within a 1 hour drive of our secret location in the Western Maine Mountains. If you are outside this range, you will be asked to park at our auxiliary parking lot and we will pick you up and drop you off there.</span>
+        <div class="info-box">
+          <div class="info-box-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+            </svg>
+          </div>
+          <div class="info-box-text">
+            We provide pick up and drop off for experiences within a 1 hour drive of our secret location in the Western Maine Mountains. If you are outside this range, you will be asked to park at our auxiliary parking lot and we will pick you up and drop you off there.
+          </div>
         </div>
 
-        <div id="address-error" class="alert alert-error hidden" style="margin-top:1rem;"></div>
+        <div id="address-error" class="alert alert-error hidden"></div>
 
-        <div class="btn-group" style="margin-top:1.5rem;">
-          <button class="btn btn-primary btn-block btn-lg" id="btn-check-address" onclick="checkAddress()">
-            Submit Address &nbsp;→
+        <button class="btn btn-primary btn-block" id="btn-check-address" onclick="checkAddress()">
+          Submit Address
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- STEP 1B: SERVICE AREA - WITHIN RANGE -->
+    <section class="main-content hidden" id="step-1b-within">
+      <div class="service-screen">
+        <h2 class="service-title">Booking Availability</h2>
+        <p class="service-subtitle">Confirming your eligibility for our exclusive table-to-door pick up service.</p>
+        
+        <div class="service-card">
+          <div class="service-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            Service Available
+          </div>
+          <h3 class="service-card-title">Within 1 Hour Arrival</h3>
+          <p class="service-card-text">Good news! You are within our priority pick up service area. Our shuttle is currently active in your neighborhood.</p>
+          <button class="btn btn-primary" onclick="goToStep(2)">
+            Continue Booking
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
           </button>
         </div>
       </div>
     </section>
 
-    <!-- ==================== STEP 1B: SERVICE AREA RESULT ==================== -->
-    <section class="container hidden" id="step-1b">
-      <div class="card" style="max-width: 600px; margin: 0 auto;">
-        <!-- Filled dynamically by JS -->
-      </div>
-    </section>
-
-    <!-- ==================== STEP 2: PREFERRED DATES ==================== -->
-    <section class="container hidden" id="step-2">
-      <div style="max-width:600px; margin:0 auto;">
-        <p class="text-secondary" style="margin-bottom:1.5rem;">Choose your top three dates to help us find the best table availability for your party.</p>
-        <div class="calendar" id="booking-calendar">
-          <!-- Calendar rendered by JS -->
-        </div>
-        <div class="selected-dates" id="selected-dates-section">
-          <div class="selected-dates-label">Selected Dates</div>
-          <div class="selected-dates-list" id="selected-dates-list">
-            <div class="select-more-chip">+ Select more</div>
+    <!-- STEP 1B: SERVICE AREA - OUTSIDE RANGE -->
+    <section class="main-content hidden" id="step-1b-outside">
+      <div class="card">
+        <div class="service-screen">
+          <div class="service-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
           </div>
-        </div>
-        <div class="btn-group btn-group-between" style="margin-top:2rem;">
-          <button class="btn btn-outline" onclick="goToStep(1)">← Back</button>
-          <button class="btn btn-primary" id="btn-continue-dates" onclick="goToStep(3)" disabled>Continue →</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==================== STEP 3: GUEST DETAILS ==================== -->
-    <section class="container hidden" id="step-3">
-      <div style="max-width:600px; margin:0 auto;">
-        <div class="page-header">
-          <h1>Guest Details</h1>
-          <p class="text-secondary">Please provide details for each guest to personalize your fine dining experience.</p>
-        </div>
-        <div id="guest-cards-container">
-          <!-- Guest cards rendered by JS -->
-        </div>
-        <button class="add-guest-btn" id="btn-add-guest" onclick="addGuest()">⊕ Add Guest</button>
-
-        <div id="guest-errors" class="alert alert-error hidden" style="margin-top:1rem;"></div>
-
-        <div class="btn-group btn-group-between" style="margin-top:2rem;">
-          <button class="btn btn-outline" onclick="goToStep(2)">Back</button>
-          <button class="btn btn-primary" onclick="validateAndContinueToPayment()">Continue to Preferences</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==================== STEP 4: PAYMENT ==================== -->
-    <section class="container hidden" id="step-4">
-      <div style="max-width:600px; margin:0 auto;">
-        <div class="page-header">
-          <h2 style="font-family:var(--font-serif);">Reservation Deposit</h2>
-        </div>
-
-        <div class="card">
-          <div class="payment-summary">
-            <div>
-              <span class="payment-badge">$50.00 Deposit Required Per Guest</span>
-              <div style="margin-top:0.5rem; font-weight:700;">Booking Summary</div>
-              <div class="text-secondary text-sm" id="payment-guest-count" style="margin-top:0.25rem;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                <span id="guest-count-display">0 Guests</span>
-              </div>
+          <h2 class="service-title">Pickup Range Notification</h2>
+          <p class="service-subtitle">You are outside our standard pickup range. Would you be comfortable meeting at a satellite parking lot?</p>
+          
+          <div class="satellite-card">
+            <div class="satellite-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+            </div>
+            <div class="satellite-name">Satellite Parking Lot</div>
+            <div class="satellite-address">
+              1798 New Vineyard Road<br>
+              New Vineyard, Maine
             </div>
           </div>
-
-          <h3 style="margin:1.5rem 0 1rem;">Payment Method</h3>
-
-          <div id="stripe-card-element" style="margin-bottom:1rem;">
-            <!-- Stripe Elements will mount here -->
-          </div>
-          <div id="card-errors" class="form-error" style="margin-bottom:1rem;"></div>
-
-          <div class="payment-total">
-            <span class="payment-total-label">Total due now</span>
-            <span class="payment-total-amount" id="payment-total">$0.00</span>
-          </div>
-
-          <button class="btn btn-primary btn-block btn-lg" id="btn-pay" onclick="handlePayment()" disabled>
-            🔒 Pay Deposit & Confirm
-          </button>
-
-          <div class="deposit-note">Your deposit is non-refundable within 1 week of your reservation.</div>
-        </div>
-
-        <div class="secure-badges">
-          <span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            Secure SSL
-          </span>
-          <span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            PCI Compliant
-          </span>
-        </div>
-
-        <div class="btn-group" style="margin-top:1.5rem;">
-          <button class="btn btn-outline" onclick="goToStep(3)">← Back</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==================== STEP 5: CONFIRMATION ==================== -->
-    <section class="container hidden" id="step-5">
-      <div style="max-width:600px; margin:0 auto;">
-        <div class="card">
-          <div class="confirmation">
-            <div class="confirmation-icon">✓</div>
-            <h2>Your booking request has been submitted.</h2>
-            <p>We've received your booking request and are processing it. You'll receive a confirmation text and email once your booking date has been confirmed.</p>
-
-            <div class="detail-section" style="text-align:left;">
-              <h3>📄 Booking Summary</h3>
-              <table class="booking-summary-table">
-                <tr>
-                  <td>Pickup address</td>
-                  <td id="confirm-address"></td>
-                </tr>
-                <tr>
-                  <td>Preferred dining dates</td>
-                  <td id="confirm-dates"></td>
-                </tr>
-                <tr>
-                  <td>Guest list</td>
-                  <td id="confirm-guests"></td>
-                </tr>
-                <tr>
-                  <td>Deposit paid</td>
-                  <td><span class="deposit-status">✓ Full deposit paid</span></td>
-                </tr>
-              </table>
-            </div>
-
-            <button class="btn btn-primary btn-block btn-lg" style="margin-top:1.5rem;" onclick="window.location.reload()">
-              Return to website
-            </button>
-            <div style="margin-top:0.75rem;">
-              <a href="#" class="text-secondary text-sm" onclick="window.print(); return false;">🖨️ Print Confirmation</a>
-            </div>
+          
+          <div class="service-buttons">
+            <button class="btn btn-primary" onclick="confirmSatellite()">Yes, continue booking</button>
+            <button class="btn btn-outline" onclick="cancelSatellite()">No, cancel booking</button>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ==================== LOADING OVERLAY ==================== -->
+    <!-- STEP 2: PREFERRED DATES -->
+    <section class="main-content hidden" id="step-2">
+      <p class="page-subtitle">Choose your top three dates to help us find the best table availability for your party.</p>
+      
+      <div class="calendar" id="booking-calendar">
+        <!-- Calendar rendered by JS -->
+      </div>
+      
+      <div class="selected-dates" id="selected-dates-section">
+        <div class="selected-dates-label">Selected Dates</div>
+        <div class="selected-dates-list" id="selected-dates-list">
+          <span class="select-more-chip">+ Select more</span>
+        </div>
+      </div>
+      
+      <div class="btn-group btn-group-between">
+        <button class="btn-back" onclick="goToStep(1)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          Back
+        </button>
+        <button class="btn btn-primary" id="btn-continue-dates" onclick="goToStep(3)" disabled>
+          Continue
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- STEP 3: GUEST DETAILS -->
+    <section class="main-content hidden" id="step-3">
+      <h1 class="page-title">Guest Details</h1>
+      <p class="page-subtitle">Please provide details for each guest to personalize your fine dining experience.</p>
+      
+      <div id="guest-cards-container">
+        <!-- Guest cards rendered by JS -->
+      </div>
+      
+      <button class="add-guest-btn" onclick="addGuest()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/>
+        </svg>
+        Add Guest
+      </button>
+
+      <div id="guest-errors" class="alert alert-error hidden"></div>
+
+      <div class="btn-group btn-group-between">
+        <button class="btn btn-outline" onclick="goToStep(2)">Back</button>
+        <button class="btn btn-primary" onclick="validateAndContinueToPayment()">Continue to Preferences</button>
+      </div>
+    </section>
+
+    <!-- STEP 4: PAYMENT -->
+    <section class="main-content hidden" id="step-4">
+      <h2 class="page-title page-title-center">Reservation Deposit</h2>
+
+      <div class="card">
+        <div class="deposit-badge">$50.00 Deposit Required Per Guest</div>
+        <div class="booking-summary-title">Booking Summary</div>
+        <div class="booking-summary-guests">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <span id="guest-count-display">0 Guests</span>
+        </div>
+      </div>
+
+      <div class="payment-card">
+        <div class="payment-card-header">
+          <h3 class="section-title">Payment Method</h3>
+          <div class="card-brands">
+            <span class="card-brand">VISA</span>
+            <span class="card-brand">AMEX</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Cardholder Name</label>
+          <input type="text" class="form-input" placeholder="John Doe">
+        </div>
+
+        <div id="stripe-card-element">
+          <!-- Stripe Elements -->
+        </div>
+        <div id="card-errors" class="alert alert-error hidden"></div>
+
+        <div class="payment-total">
+          <span class="payment-total-label">Total due now</span>
+          <span class="payment-total-amount" id="payment-total">$0.00</span>
+        </div>
+
+        <button class="btn btn-primary btn-block" id="btn-pay" onclick="handlePayment()" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          Pay Deposit & Confirm
+        </button>
+
+        <p class="payment-note">Your deposit is non-refundable within 1 week of your reservation.</p>
+      </div>
+
+      <div class="secure-badges">
+        <span class="secure-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          Secure SSL
+        </span>
+        <span class="secure-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+          PCI Compliant
+        </span>
+      </div>
+    </section>
+
+    <!-- STEP 5: CONFIRMATION -->
+    <section class="main-content hidden" id="step-5">
+      <div class="card">
+        <div class="confirmation">
+          <div class="confirmation-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+          <h2 class="confirmation-title">Your booking request has been submitted.</h2>
+          <p class="confirmation-text">We've received your booking request and are processing it. You'll receive a confirmation text and email once your booking date has been confirmed.</p>
+
+          <div class="summary-section">
+            <div class="summary-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+              </svg>
+              Booking Summary
+            </div>
+            <table class="summary-table">
+              <tr>
+                <td>Pickup address</td>
+                <td id="confirm-address"></td>
+              </tr>
+              <tr>
+                <td>Preferred dining dates</td>
+                <td id="confirm-dates"></td>
+              </tr>
+              <tr>
+                <td>Guest list</td>
+                <td id="confirm-guests"></td>
+              </tr>
+              <tr>
+                <td>Deposit paid</td>
+                <td>
+                  <span class="deposit-paid">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    Full deposit paid
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <button class="btn btn-primary btn-block" onclick="window.location.reload()">Return to website</button>
+          
+          <a href="#" class="print-link" onclick="window.print(); return false;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+              <rect x="6" y="14" width="12" height="8"/>
+            </svg>
+            Print Confirmation
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOADING OVERLAY -->
     <div class="loading-overlay hidden" id="loading">
       <div class="spinner"></div>
-      <span class="text-secondary" id="loading-text">Processing...</span>
+      <span class="loading-text" id="loading-text">Processing...</span>
     </div>
   </div>
 
