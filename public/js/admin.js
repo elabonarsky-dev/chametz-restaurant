@@ -6,6 +6,8 @@ const API_BASE = '/api';
 let adminToken = '';
 let currentBookingId = '';
 let adminCalendarMonth, adminCalendarYear;
+let selectedDate = null;
+let bookingsData = [];
 
 // ─── Authentication ───────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -18,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const now = new Date();
   adminCalendarMonth = now.getMonth();
   adminCalendarYear = now.getFullYear();
+  selectedDate = now;
   
   document.getElementById('admin-secret').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') authenticate();
@@ -71,13 +74,17 @@ function showView(view, linkEl) {
   document.getElementById(`view-${view}`).classList.remove('hidden');
   
   document.querySelectorAll('.admin-nav-link').forEach(el => el.classList.remove('active'));
-  if (linkEl) linkEl.classList.add('active');
+  if (linkEl) {
+    linkEl.classList.add('active');
+  } else {
+    document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
+  }
   
   if (view === 'bookings') loadBookings();
-  if (view === 'dates') loadDates();
+  if (view === 'dates') loadDatesView();
 }
 
-// ─── Bookings ─────────────────────────────────────────────────
+// ─── Bookings Dashboard ───────────────────────────────────────
 async function loadBookings() {
   showLoading('Loading bookings...');
   
@@ -93,52 +100,101 @@ async function loadBookings() {
       return;
     }
     
-    renderBookings(data.bookings || []);
+    bookingsData = data.bookings || [];
+    updateStats(bookingsData);
+    renderBookingsTable(bookingsData);
   } catch (err) {
     hideLoading();
     alert('Network error loading bookings.');
   }
 }
 
-function renderBookings(bookings) {
+function updateStats(bookings) {
+  const total = bookings.length;
+  const pending = bookings.filter(b => b.status === 'pending').length;
+  const today = bookings.filter(b => {
+    const created = new Date(b.created_at);
+    const now = new Date();
+    return created.toDateString() === now.toDateString();
+  }).length;
+  
+  document.getElementById('stat-total').textContent = total.toLocaleString();
+  document.getElementById('stat-pending').textContent = pending;
+  document.getElementById('stat-today').textContent = today;
+}
+
+function renderBookingsTable(bookings) {
   const tbody = document.getElementById('bookings-tbody');
-  const empty = document.getElementById('bookings-empty');
   
   if (bookings.length === 0) {
-    tbody.innerHTML = '';
-    empty.classList.remove('hidden');
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; padding: 3rem; color: var(--c-text-muted);">
+          No bookings found
+        </td>
+      </tr>
+    `;
     return;
   }
   
-  empty.classList.add('hidden');
-  
-  tbody.innerHTML = bookings.map(b => {
+  tbody.innerHTML = bookings.map((b, index) => {
     const dates = Array.isArray(b.preferred_dates) 
-      ? b.preferred_dates.slice(0, 2).join(', ') 
+      ? b.preferred_dates[0] 
       : '';
     const statusClass = `status-badge-${b.status}`;
+    const createdDate = b.created_at ? new Date(b.created_at).toLocaleDateString('en-US', { 
+      month: 'short', day: 'numeric', year: 'numeric' 
+    }) : 'N/A';
+    const bookingNum = 8821 + index;
     
     return `
-      <tr onclick="viewBooking('${b.id}')">
-        <td><strong>${escapeHtml(b.phone || 'N/A')}</strong></td>
-        <td>${escapeHtml(b.phone || 'N/A')}</td>
-        <td>${escapeHtml(dates)}</td>
+      <tr>
+        <td><a href="#" class="booking-id-link" onclick="viewBooking('${b.id}')">#BK-${bookingNum}</a></td>
+        <td>${escapeHtml(b.pickup_address || 'N/A')}</td>
+        <td>${formatDate(dates)}</td>
         <td>${b.guest_count || 0}</td>
-        <td><span class="status-badge ${statusClass}">${b.status}</span></td>
-        <td>$${((b.deposit_amount || 0) / 100).toFixed(2)}</td>
+        <td><span class="status-badge ${statusClass}">${capitalizeFirst(b.status)}</span></td>
+        <td>${createdDate}</td>
         <td>
-          <button class="btn-icon" onclick="event.stopPropagation(); viewBooking('${b.id}')">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-              <circle cx="12" cy="12" r="3"/>
+          <div class="table-actions">
+            <a href="#" class="action-link" onclick="viewBooking('${b.id}')">View</a>
+            <svg class="action-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="confirmDelete('${b.id}')">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
             </svg>
-          </button>
+          </div>
         </td>
       </tr>
     `;
   }).join('');
+  
+  document.getElementById('showing-count').textContent = bookings.length;
+  document.getElementById('total-count').textContent = bookings.length;
+  renderPagination(bookings.length);
 }
 
+function renderPagination(total) {
+  const totalPages = Math.ceil(total / 10) || 1;
+  const pagination = document.getElementById('pagination');
+  
+  let html = `
+    <button class="pagination-btn">‹</button>
+    <button class="pagination-btn active">1</button>
+  `;
+  
+  for (let i = 2; i <= Math.min(3, totalPages); i++) {
+    html += `<button class="pagination-btn">${i}</button>`;
+  }
+  
+  if (totalPages > 4) {
+    html += `<span class="pagination-dots">...</span>`;
+    html += `<button class="pagination-btn">${totalPages}</button>`;
+  }
+  
+  html += `<button class="pagination-btn">›</button>`;
+  pagination.innerHTML = html;
+}
+
+// ─── Booking Details ──────────────────────────────────────────
 async function viewBooking(id) {
   currentBookingId = id;
   showLoading('Loading booking details...');
@@ -166,65 +222,81 @@ async function viewBooking(id) {
 function renderBookingDetails(booking) {
   const statusClass = `status-badge-${booking.status}`;
   document.getElementById('detail-status').className = `status-badge ${statusClass}`;
-  document.getElementById('detail-status').textContent = booking.status;
+  document.getElementById('detail-status').textContent = booking.status.toUpperCase();
+  
+  const bookingIndex = bookingsData.findIndex(b => b.id === booking.id);
+  const bookingNum = 8842 + bookingIndex;
+  document.getElementById('detail-booking-id').textContent = `#${bookingNum}`;
+  
+  const primaryGuest = booking.guests?.[0];
+  document.getElementById('detail-guest-name').textContent = primaryGuest?.name || 'Guest';
+  document.getElementById('detail-phone').textContent = booking.phone || 'No phone';
+  document.getElementById('detail-email').textContent = booking.email || 'No email';
+  
+  const guestCount = booking.guests?.length || 0;
+  document.getElementById('detail-summary').textContent = `Reservation for ${guestCount} guest${guestCount !== 1 ? 's' : ''}`;
   
   document.getElementById('detail-address').textContent = booking.pickup_address || 'N/A';
-  document.getElementById('detail-travel').textContent = `${booking.travel_time_minutes || 0} minutes`;
-  document.getElementById('detail-satellite').textContent = booking.satellite_confirmation ? 'Yes' : 'No';
   
-  const dates = Array.isArray(booking.preferred_dates) ? booking.preferred_dates.join(', ') : 'N/A';
+  const dates = Array.isArray(booking.preferred_dates) 
+    ? booking.preferred_dates.map(d => formatDate(d)).join(', ') 
+    : 'N/A';
   document.getElementById('detail-dates').textContent = dates;
-  document.getElementById('detail-phone').textContent = booking.phone || 'N/A';
-  document.getElementById('detail-email').textContent = booking.email || 'N/A';
-  
-  const guests = booking.guests || [];
-  document.getElementById('detail-guest-count').textContent = `${guests.length} guest${guests.length !== 1 ? 's' : ''}`;
-  
-  document.getElementById('detail-guests').innerHTML = guests.map(g => `
-    <tr>
-      <td>${escapeHtml(g.name)}</td>
-      <td>${escapeHtml(g.birthday)}</td>
-      <td>${g.beverage_pairing === 'alcoholic' ? '🍷 Alcoholic' : '🥤 Non-alcoholic'}</td>
-      <td>${escapeHtml(g.allergies) || 'None'}</td>
-    </tr>
-  `).join('');
   
   document.getElementById('detail-deposit').textContent = `$${((booking.deposit_amount || 0) / 100).toFixed(2)}`;
-  document.getElementById('detail-payment-id').textContent = booking.stripe_payment_id || 'N/A';
+  
+  renderGuestList(booking.guests || []);
 }
 
-async function updateBookingStatus(status) {
-  if (!currentBookingId) return;
+function renderGuestList(guests) {
+  const container = document.getElementById('detail-guests-list');
   
-  showLoading('Updating booking...');
-  
-  try {
-    const res = await fetch(`${API_BASE}/update-booking`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${adminToken}`,
-      },
-      body: JSON.stringify({ id: currentBookingId, status }),
-    });
-    
-    hideLoading();
-    
-    if (!res.ok) {
-      const data = await res.json();
-      alert(data.error || 'Failed to update booking.');
-      return;
-    }
-    
-    viewBooking(currentBookingId);
-  } catch (err) {
-    hideLoading();
-    alert('Network error updating booking.');
+  if (guests.length === 0) {
+    container.innerHTML = '<p style="color: var(--c-text-muted);">No guests</p>';
+    return;
   }
+  
+  container.innerHTML = guests.map((g, i) => {
+    const initials = getInitials(g.name);
+    const isPrimary = i === 0;
+    const avatarClass = i % 2 === 0 ? '' : 'alt';
+    
+    return `
+      <div class="guest-list-item">
+        <div class="guest-avatar ${avatarClass}">${initials}</div>
+        <div class="guest-info">
+          <div class="guest-name-col">
+            <div class="guest-name-text">
+              ${escapeHtml(g.name)}
+              ${isPrimary ? '<span class="primary-badge">Primary</span>' : ''}
+            </div>
+            <div class="guest-birthday">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              </svg>
+              ${g.birthday || 'N/A'}
+            </div>
+          </div>
+          <div class="guest-pairing">
+            <div class="pairing-label">Pairing</div>
+            <div class="pairing-value">${g.beverage_pairing === 'alcoholic' ? 'Alcoholic' : 'Non-alcoholic'}</div>
+          </div>
+          ${g.allergies ? `
+            <div class="guest-allergy">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              ${escapeHtml(g.allergies)}
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
-async function deleteBooking() {
-  if (!currentBookingId) return;
+async function confirmDelete(id) {
   if (!confirm('Are you sure you want to delete this booking?')) return;
   
   showLoading('Deleting booking...');
@@ -236,7 +308,7 @@ async function deleteBooking() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${adminToken}`,
       },
-      body: JSON.stringify({ id: currentBookingId }),
+      body: JSON.stringify({ id }),
     });
     
     hideLoading();
@@ -247,62 +319,79 @@ async function deleteBooking() {
       return;
     }
     
-    showView('bookings');
+    loadBookings();
   } catch (err) {
     hideLoading();
     alert('Network error deleting booking.');
   }
 }
 
-// ─── Dates Management ─────────────────────────────────────────
-async function loadDates() {
+// ─── Dining Schedule ──────────────────────────────────────────
+function loadDatesView() {
   renderAdminCalendar();
-  
-  try {
-    const res = await fetch(`${API_BASE}/manage-dates`, {
-      headers: { 'Authorization': `Bearer ${adminToken}` },
-    });
-    const data = await res.json();
-    
-    if (res.ok) {
-      renderDatesList(data.dates || []);
-    }
-  } catch (err) {
-    console.error('Error loading dates:', err);
-  }
+  updateDayDetails();
 }
 
 function renderAdminCalendar() {
-  const cal = document.getElementById('admin-calendar');
   const daysInMonth = new Date(adminCalendarYear, adminCalendarMonth + 1, 0).getDate();
   const firstDow = new Date(adminCalendarYear, adminCalendarMonth, 1).getDay();
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-
-  let html = `
-    <div class="calendar-header">
-      <button class="calendar-nav" onclick="adminPrevMonth()">‹</button>
-      <div class="calendar-title">${monthNames[adminCalendarMonth]} ${adminCalendarYear}</div>
-      <button class="calendar-nav" onclick="adminNextMonth()">›</button>
-    </div>
-    <div class="calendar-grid">
-      <div class="calendar-dow">Sun</div><div class="calendar-dow">Mon</div>
-      <div class="calendar-dow">Tue</div><div class="calendar-dow">Wed</div>
-      <div class="calendar-dow">Thu</div><div class="calendar-dow">Fri</div>
-      <div class="calendar-dow">Sat</div>
-  `;
-
+  
+  document.getElementById('admin-calendar-title').textContent = `${monthNames[adminCalendarMonth]} ${adminCalendarYear}`;
+  
+  const grid = document.getElementById('admin-calendar-grid');
+  const dows = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  
+  let html = dows.map(d => `<div class="schedule-dow">${d}</div>`).join('');
+  
   for (let i = 0; i < firstDow; i++) {
-    html += '<div class="calendar-day empty"></div>';
+    html += '<div class="schedule-day"></div>';
   }
-
+  
+  const today = new Date();
+  
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(adminCalendarYear, adminCalendarMonth, d);
-    const dateStr = formatDate(date);
-    html += `<div class="calendar-day" onclick="toggleDateStatus('${dateStr}')">${d}</div>`;
+    const isToday = date.toDateString() === today.toDateString();
+    const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
+    const isTuesday = date.getDay() === 2;
+    
+    let classes = 'schedule-day';
+    if (isSelected) classes += ' selected';
+    if (isTuesday) classes += ' closed';
+    
+    html += `
+      <div class="${classes}" onclick="selectDate(${adminCalendarYear}, ${adminCalendarMonth}, ${d})">
+        ${d}
+        ${!isTuesday ? '<span class="dot"></span>' : ''}
+      </div>
+    `;
   }
+  
+  grid.innerHTML = html;
+}
 
-  html += '</div>';
-  cal.innerHTML = html;
+function selectDate(year, month, day) {
+  selectedDate = new Date(year, month, day);
+  renderAdminCalendar();
+  updateDayDetails();
+}
+
+function updateDayDetails() {
+  if (!selectedDate) return;
+  
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  
+  document.getElementById('selected-month').textContent = monthNames[selectedDate.getMonth()];
+  document.getElementById('selected-day').textContent = String(selectedDate.getDate()).padStart(2, '0');
+  document.getElementById('selected-weekday').textContent = dayNames[selectedDate.getDay()];
+  
+  const isToday = selectedDate.toDateString() === new Date().toDateString();
+  document.getElementById('today-badge').style.display = isToday ? 'inline-block' : 'none';
+  
+  const isTuesday = selectedDate.getDay() === 2;
+  document.getElementById('availability-toggle').checked = !isTuesday;
 }
 
 function adminPrevMonth() {
@@ -317,7 +406,12 @@ function adminNextMonth() {
   renderAdminCalendar();
 }
 
-async function toggleDateStatus(dateStr) {
+async function applyDateChanges() {
+  if (!selectedDate) return;
+  
+  const isOpen = document.getElementById('availability-toggle').checked;
+  const dateStr = formatDateISO(selectedDate);
+  
   try {
     const res = await fetch(`${API_BASE}/manage-dates`, {
       method: 'POST',
@@ -325,43 +419,45 @@ async function toggleDateStatus(dateStr) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${adminToken}`,
       },
-      body: JSON.stringify({ date: dateStr, is_open: true }),
+      body: JSON.stringify({ date: dateStr, is_open: isOpen }),
     });
     
     if (res.ok) {
-      loadDates();
+      alert('Date settings saved!');
     }
   } catch (err) {
-    console.error('Error toggling date:', err);
+    alert('Error saving date settings.');
   }
-}
-
-function renderDatesList(dates) {
-  const list = document.getElementById('dates-list');
-  
-  if (dates.length === 0) {
-    list.innerHTML = '<p class="empty-state">No dates configured. Click on calendar dates to add them.</p>';
-    return;
-  }
-  
-  list.innerHTML = dates.map(d => `
-    <div class="setting-item">
-      <div>
-        <div class="setting-label">${d.date}</div>
-      </div>
-      <span class="status-badge ${d.is_open ? 'status-badge-confirmed' : 'status-badge-cancelled'}">
-        ${d.is_open ? 'Open' : 'Closed'}
-      </span>
-    </div>
-  `).join('');
 }
 
 // ─── Utilities ────────────────────────────────────────────────
-function formatDate(date) {
+function formatDate(dateStr) {
+  if (!dateStr) return 'N/A';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const date = new Date(parts[0], parts[1] - 1, parts[2]);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatDateISO(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+function getInitials(name) {
+  if (!name) return '??';
+  const parts = name.trim().split(' ');
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+}
+
+function capitalizeFirst(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 function escapeHtml(str) {

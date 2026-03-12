@@ -26,12 +26,25 @@
   <div class="admin-layout hidden" id="admin-layout">
     <!-- SIDEBAR -->
     <aside class="admin-sidebar">
-      <div class="admin-logo">Aster & Ivy</div>
+      <div class="admin-logo">
+        <div class="admin-logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+            <line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>
+          </svg>
+        </div>
+        <div class="admin-logo-text">
+          <span class="admin-logo-title">Admin Portal</span>
+          <span class="admin-logo-subtitle">Venue Management</span>
+        </div>
+      </div>
+      
       <nav class="admin-nav">
         <a href="#" class="admin-nav-link active" data-view="bookings" onclick="showView('bookings', this)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
           </svg>
           Bookings
         </a>
@@ -41,11 +54,12 @@
             <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
             <line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
-          Manage Dates
+          Available Dates
         </a>
         <a href="#" class="admin-nav-link" data-view="settings" onclick="showView('settings', this)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6M4.22 4.22l4.24 4.24m7.08 7.08l4.24 4.24M1 12h6m10 0h6M4.22 19.78l4.24-4.24m7.08-7.08l4.24-4.24"/>
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
           Settings
         </a>
@@ -54,221 +68,361 @@
 
     <!-- MAIN CONTENT -->
     <main class="admin-main">
-      <!-- BOOKINGS VIEW -->
-      <div id="view-bookings">
-        <div class="admin-page-header">
-          <h1 class="admin-page-title">Bookings</h1>
-          <button class="btn btn-outline" onclick="loadBookings()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-            </svg>
-            Refresh
-          </button>
+      <!-- TOP BAR -->
+      <div class="admin-topbar">
+        <div class="admin-search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="text" placeholder="Search bookings..." id="search-input">
         </div>
-
-        <div class="admin-card">
-          <table class="admin-table" id="bookings-table">
-            <thead>
-              <tr>
-                <th>Guest Name</th>
-                <th>Phone</th>
-                <th>Dates</th>
-                <th>Guests</th>
-                <th>Status</th>
-                <th>Deposit</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="bookings-tbody">
-              <!-- Populated by JS -->
-            </tbody>
-          </table>
-          <div id="bookings-empty" class="empty-state hidden">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-            </svg>
-            <p>No bookings yet</p>
-          </div>
-        </div>
+        <button class="btn-new-booking">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          New Booking
+        </button>
       </div>
 
-      <!-- BOOKING DETAILS VIEW -->
-      <div id="view-booking-details" class="hidden">
-        <div class="admin-page-header">
-          <button class="btn-back" onclick="showView('bookings')">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 12H5M12 19l-7-7 7-7"/>
-            </svg>
-            Back to Bookings
-          </button>
-          <div class="action-buttons">
-            <button class="btn btn-outline" onclick="updateBookingStatus('confirmed')">Confirm</button>
-            <button class="btn btn-danger" onclick="deleteBooking()">Delete</button>
+      <div class="admin-content">
+        <!-- BOOKINGS DASHBOARD VIEW -->
+        <div id="view-bookings">
+          <div class="admin-page-header">
+            <h1 class="admin-page-title">Bookings Dashboard</h1>
+            <p class="admin-page-subtitle">Comprehensive overview of your restaurant's reservations and guest logistics.</p>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-card-header">
+                <span class="stat-card-label">Total Bookings</span>
+                <span class="stat-card-badge positive">+12%</span>
+              </div>
+              <div class="stat-card-value" id="stat-total">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-header">
+                <span class="stat-card-label">Pending Deposits</span>
+                <span class="stat-card-badge negative">-5%</span>
+              </div>
+              <div class="stat-card-value" id="stat-pending">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-header">
+                <span class="stat-card-label">New Today</span>
+                <span class="stat-card-badge positive">+2%</span>
+              </div>
+              <div class="stat-card-value" id="stat-today">0</div>
+            </div>
+          </div>
+
+          <div class="data-table-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Booking ID</th>
+                  <th>Pickup Address</th>
+                  <th>Preferred Dates</th>
+                  <th>Guests</th>
+                  <th>Status</th>
+                  <th>Created Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="bookings-tbody">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+            <div class="table-footer">
+              <div class="table-info">Showing <strong>1-<span id="showing-count">0</span></strong> of <strong id="total-count">0</strong></div>
+              <div class="pagination" id="pagination">
+                <!-- Pagination rendered by JS -->
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="admin-card">
-          <div class="admin-card-header">
-            <h2 class="admin-card-title">Booking Details</h2>
-            <span class="status-badge" id="detail-status"></span>
+        <!-- BOOKING DETAILS VIEW -->
+        <div id="view-booking-details" class="hidden">
+          <div class="details-header">
+            <div class="details-header-left">
+              <svg class="details-header-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              <h1 class="details-title">Booking Details</h1>
+            </div>
+            <button class="btn-back" onclick="showView('bookings')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+              Back
+            </button>
           </div>
-          <div class="booking-detail-grid">
+
+          <div class="booking-info-header">
             <div>
-              <div class="detail-item">
-                <div class="detail-label">Pickup Address</div>
-                <div class="detail-value" id="detail-address"></div>
+              <div class="booking-status-row">
+                <span class="status-badge" id="detail-status"></span>
+                <span class="booking-id" id="detail-booking-id"></span>
               </div>
-              <div class="detail-item">
-                <div class="detail-label">Travel Time</div>
-                <div class="detail-value" id="detail-travel"></div>
+              <h2 class="guest-name" id="detail-guest-name"></h2>
+              <div class="contact-info">
+                <div id="detail-phone"></div>
+                <div id="detail-email"></div>
               </div>
-              <div class="detail-item">
-                <div class="detail-label">Satellite Parking</div>
-                <div class="detail-value" id="detail-satellite"></div>
+              <div class="reservation-summary" id="detail-summary"></div>
+            </div>
+            <button class="btn-edit-booking">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Edit Booking
+            </button>
+          </div>
+
+          <div class="detail-cards-grid">
+            <div class="detail-card">
+              <div class="detail-card-header">
+                <svg class="detail-card-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <h3 class="detail-card-title">Pickup & Schedule</h3>
+              </div>
+              <div class="detail-row">
+                <div class="detail-item">
+                  <div class="detail-label">Pickup Location</div>
+                  <div class="detail-value">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    <span id="detail-address"></span>
+                  </div>
+                </div>
+                <div class="detail-item">
+                  <div class="detail-label">Preferred Dates</div>
+                  <div class="detail-value">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                      <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+                      <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    <span id="detail-dates"></span>
+                  </div>
+                </div>
               </div>
             </div>
-            <div>
-              <div class="detail-item">
-                <div class="detail-label">Preferred Dates</div>
-                <div class="detail-value" id="detail-dates"></div>
+
+            <div class="detail-card payment-status-card">
+              <div class="payment-watermark">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                </svg>
               </div>
-              <div class="detail-item">
-                <div class="detail-label">Contact Phone</div>
-                <div class="detail-value" id="detail-phone"></div>
+              <div class="detail-card-header">
+                <svg class="detail-card-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                  <line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+                <h3 class="detail-card-title">Payment Status</h3>
               </div>
-              <div class="detail-item">
-                <div class="detail-label">Contact Email</div>
-                <div class="detail-value" id="detail-email"></div>
+              <div class="payment-amount">
+                <span class="payment-label">Deposit Paid</span>
+                <span class="payment-value" id="detail-deposit"></span>
+              </div>
+              <div class="payment-method">
+                <div class="card-info">
+                  <span class="card-brand-badge">VISA</span>
+                  <span class="card-number">**** 4242</span>
+                </div>
+                <svg class="payment-verified" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+              </div>
+              <a href="#" class="view-invoice-link">View Full Invoice</a>
+            </div>
+          </div>
+
+          <div class="guest-list-card">
+            <div class="detail-card-header">
+              <svg class="detail-card-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              <h3 class="detail-card-title">Guest List</h3>
+            </div>
+            <div id="detail-guests-list">
+              <!-- Guest items populated by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- DINING SCHEDULE VIEW -->
+        <div id="view-dates" class="hidden">
+          <div class="admin-page-header">
+            <h1 class="admin-page-title">Dining Schedule</h1>
+            <p class="admin-page-subtitle">Manage open and closed dates for your restaurant reservations across the season.</p>
+          </div>
+
+          <div class="schedule-layout">
+            <div class="calendar-card">
+              <div class="calendar-controls">
+                <div class="calendar-nav-group">
+                  <button class="calendar-nav-btn" onclick="adminPrevMonth()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                  </button>
+                  <span class="calendar-month-title" id="admin-calendar-title"></span>
+                  <button class="calendar-nav-btn" onclick="adminNextMonth()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                  </button>
+                </div>
+                <div class="view-toggle">
+                  <button class="view-toggle-btn active">Month View</button>
+                  <button class="view-toggle-btn">Week View</button>
+                </div>
+              </div>
+              <div class="schedule-calendar" id="admin-calendar-grid">
+                <!-- Calendar rendered by JS -->
+              </div>
+            </div>
+
+            <div class="day-details-card">
+              <div class="day-details-header">
+                <h3 class="day-details-title">Day Details</h3>
+                <span class="today-badge" id="today-badge">TODAY</span>
+              </div>
+              <div class="date-display">
+                <div class="date-month" id="selected-month"></div>
+                <div class="date-day" id="selected-day"></div>
+                <div class="date-weekday" id="selected-weekday"></div>
+              </div>
+              <div class="day-setting">
+                <div class="day-setting-left">
+                  <svg class="day-setting-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+                  </svg>
+                  <div>
+                    <div class="day-setting-label">Availability Status</div>
+                    <div class="day-setting-desc">Currently accepting bookings</div>
+                  </div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="availability-toggle" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="day-setting">
+                <div class="day-setting-left">
+                  <svg class="day-setting-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                  </svg>
+                  <div>
+                    <div class="day-setting-label">Reservation Limit</div>
+                    <div class="day-setting-desc">Maximum 45 guests</div>
+                  </div>
+                </div>
+                <span class="edit-link">Edit</span>
+              </div>
+              <div class="day-setting">
+                <div class="day-setting-left">
+                  <svg class="day-setting-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                  <div>
+                    <div class="day-setting-label">Special Event</div>
+                    <div class="day-setting-desc"></div>
+                  </div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="special-event-toggle">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="day-actions">
+                <button class="btn-apply" onclick="applyDateChanges()">Apply Changes to Date</button>
+                <button class="btn-view-bookings">View Bookings (<span id="day-booking-count">0</span>)</button>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="admin-card">
-          <div class="admin-card-header">
-            <h2 class="admin-card-title">Guest List</h2>
-            <span id="detail-guest-count"></span>
+        <!-- SETTINGS VIEW -->
+        <div id="view-settings" class="hidden">
+          <div class="admin-page-header">
+            <h1 class="admin-page-title">Settings</h1>
+            <p class="admin-page-subtitle">Manage your restaurant profile, notifications, and security preferences.</p>
           </div>
-          <table class="guest-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Birthday</th>
-                <th>Beverage</th>
-                <th>Allergies</th>
-              </tr>
-            </thead>
-            <tbody id="detail-guests">
-              <!-- Populated by JS -->
-            </tbody>
-          </table>
-        </div>
 
-        <div class="admin-card">
-          <div class="admin-card-header">
-            <h2 class="admin-card-title">Payment</h2>
-          </div>
-          <div class="booking-detail-grid">
-            <div class="detail-item">
-              <div class="detail-label">Deposit Amount</div>
-              <div class="detail-value" id="detail-deposit"></div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">Payment ID</div>
-              <div class="detail-value" id="detail-payment-id"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- DATES VIEW -->
-      <div id="view-dates" class="hidden">
-        <div class="admin-page-header">
-          <h1 class="admin-page-title">Manage Dates</h1>
-        </div>
-
-        <div class="admin-card admin-calendar">
-          <div id="admin-calendar">
-            <!-- Calendar rendered by JS -->
-          </div>
-        </div>
-
-        <div class="admin-card">
-          <div class="admin-card-header">
-            <h2 class="admin-card-title">Date Status</h2>
-          </div>
-          <div id="dates-list">
-            <!-- Dates list rendered by JS -->
-          </div>
-        </div>
-      </div>
-
-      <!-- SETTINGS VIEW -->
-      <div id="view-settings" class="hidden">
-        <div class="admin-page-header">
-          <h1 class="admin-page-title">Settings</h1>
-        </div>
-
-        <div class="admin-card">
           <div class="settings-section">
-            <h3 class="settings-section-title">Notifications</h3>
-            <div class="setting-item">
-              <div>
-                <div class="setting-label">Email Notifications</div>
-                <div class="setting-desc">Receive email for new bookings</div>
-              </div>
-              <label class="toggle-switch">
-                <input type="checkbox" checked>
-                <span class="toggle-slider"></span>
-              </label>
+            <div class="settings-section-header">
+              <svg class="settings-section-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+              <h3 class="settings-section-title">General Venue Settings</h3>
             </div>
-            <div class="setting-item">
-              <div>
-                <div class="setting-label">SMS Notifications</div>
-                <div class="setting-desc">Receive SMS for new bookings</div>
+            <div class="venue-cover"></div>
+            <div class="settings-form-row">
+              <div class="form-group">
+                <label class="form-label">Venue Name</label>
+                <input type="text" class="form-input" value="La Terrace Bistro">
               </div>
-              <label class="toggle-switch">
-                <input type="checkbox">
-                <span class="toggle-slider"></span>
-              </label>
+              <div class="form-group">
+                <label class="form-label">Cuisine Type</label>
+                <input type="text" class="form-input" value="Modern European">
+              </div>
             </div>
-          </div>
-
-          <div class="settings-section">
-            <h3 class="settings-section-title">Booking Settings</h3>
-            <div class="setting-item">
-              <div>
-                <div class="setting-label">Auto-confirm Bookings</div>
-                <div class="setting-desc">Automatically confirm new bookings</div>
+            <div class="settings-form-row full">
+              <div class="form-group">
+                <label class="form-label">Address</label>
+                <input type="text" class="form-input" value="124 Gastronomy Ave, Culinary District, NY 10012">
               </div>
-              <label class="toggle-switch">
-                <input type="checkbox">
-                <span class="toggle-slider"></span>
-              </label>
             </div>
-            <div class="setting-item">
-              <div>
-                <div class="setting-label">Max Guests per Booking</div>
-                <div class="setting-desc">Maximum number of guests allowed</div>
+            <div class="settings-form-row">
+              <div class="form-group">
+                <label class="form-label">Contact Email</label>
+                <input type="email" class="form-input" value="hello@laterrace.com">
               </div>
-              <input type="number" class="form-input" value="10" style="width: 80px;">
+              <div class="form-group">
+                <label class="form-label">Phone Number</label>
+                <input type="tel" class="form-input" value="+1 (555) 982-3412">
+              </div>
+            </div>
+            <div class="settings-actions">
+              <button class="btn-save">Save Venue Changes</button>
             </div>
           </div>
 
           <div class="settings-section">
-            <h3 class="settings-section-title">Deposit Settings</h3>
-            <div class="setting-item">
-              <div>
-                <div class="setting-label">Deposit Amount (per guest)</div>
-                <div class="setting-desc">Amount required per guest</div>
-              </div>
-              <input type="text" class="form-input" value="$50.00" style="width: 100px;">
+            <div class="settings-section-header">
+              <svg class="settings-section-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              <h3 class="settings-section-title">Account Management</h3>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Current Password</label>
+              <input type="password" class="form-input" value="********">
+            </div>
+            <div class="form-group">
+              <label class="form-label">New Password</label>
+              <input type="password" class="form-input" placeholder="Enter new password">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirm New Password</label>
+              <input type="password" class="form-input" placeholder="Confirm new password">
+            </div>
+            <div class="settings-actions">
+              <button class="btn-save secondary">Update Password</button>
             </div>
           </div>
-
-          <button class="btn btn-primary">Save Settings</button>
         </div>
       </div>
     </main>
