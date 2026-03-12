@@ -700,30 +700,43 @@ textarea.form-input {
   padding: 0.75rem 0;
 }
 
+.booking-summary-card {
+  background: var(--c-card);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 2rem;
+  box-shadow: var(--shadow);
+  margin-bottom: 1rem;
+}
+
 .deposit-badge {
   display: inline-block;
   padding: 0.375rem 0.75rem;
   background: var(--c-warning-bg);
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 600;
   color: var(--c-primary);
+  margin-bottom: 1rem;
 }
 
 .booking-summary-title {
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.125rem;
   text-align: center;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .booking-summary-guests {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.375rem;
-  font-size: 0.875rem;
-  color: var(--c-text-secondary);
+  justify-content: flex-start;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  color: #0D9488;
+}
+
+.booking-summary-guests svg {
+  color: #0D9488;
 }
 
 .payment-card {
