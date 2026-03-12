@@ -313,7 +313,28 @@ function renderGuestCards() {
 function updateGuest(index, field, value) {
   state.guests[index][field] = value;
 
-  if (field === 'beverage_pairing' || field === 'birthday') {
+  if (field === 'beverage_pairing') {
+    const guest = state.guests[index];
+    const warningEl = document.getElementById(`age-warning-${index}`);
+    
+    if (warningEl && guest.birthday && value === 'alcoholic') {
+      const age = calcAge(guest.birthday);
+      if (age >= 0 && age < 21) {
+        warningEl.textContent = `Guest must be 21 or older for alcoholic pairing. Switching to non-alcoholic.`;
+        warningEl.classList.remove('hidden');
+        state.guests[index].beverage_pairing = 'non-alcoholic';
+      } else {
+        warningEl.classList.add('hidden');
+      }
+    } else if (warningEl) {
+      warningEl.classList.add('hidden');
+    }
+    
+    updateBeverageToggle(index);
+    return;
+  }
+
+  if (field === 'birthday') {
     const guest = state.guests[index];
     const warningEl = document.getElementById(`age-warning-${index}`);
     if (warningEl && guest.birthday && guest.beverage_pairing === 'alcoholic') {
@@ -322,12 +343,30 @@ function updateGuest(index, field, value) {
         warningEl.textContent = `Guest must be 21 or older for alcoholic pairing. Switching to non-alcoholic.`;
         warningEl.classList.remove('hidden');
         state.guests[index].beverage_pairing = 'non-alcoholic';
-        setTimeout(() => renderGuestCards(), 100);
-        return;
+        updateBeverageToggle(index);
       } else {
         warningEl.classList.add('hidden');
       }
     }
+  }
+}
+
+function updateBeverageToggle(index) {
+  const guest = state.guests[index];
+  const container = document.getElementById('guest-cards-container');
+  const guestCards = container.querySelectorAll('.guest-card');
+  
+  if (guestCards[index]) {
+    const toggleBtns = guestCards[index].querySelectorAll('.toggle-btn');
+    toggleBtns.forEach(btn => {
+      btn.classList.remove('active');
+      if (btn.textContent.includes('Alcoholic') && !btn.textContent.includes('Non') && guest.beverage_pairing === 'alcoholic') {
+        btn.classList.add('active');
+      }
+      if (btn.textContent.includes('Non-alcoholic') && guest.beverage_pairing === 'non-alcoholic') {
+        btn.classList.add('active');
+      }
+    });
   }
 }
 
