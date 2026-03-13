@@ -143,7 +143,7 @@ body {
 
 .main-content {
   width: 100%;
-  max-width: 580px;
+  max-width: 560px;
 }
 
 .card {
@@ -982,7 +982,7 @@ textarea.form-input {
 
 /* ============ RESPONSIVE ============ */
 
-@media (max-width: 450px) {
+@media (max-width: 460px) {
   .booking-page {
     padding: 1.5rem 1rem;
     justify-content: flex-start;
@@ -991,7 +991,7 @@ textarea.form-input {
   
   /* Shrink stepper to fit narrow viewports (no horizontal scroll) */
   .stepper {
-    gap: 4px;
+    gap: 6px;
   }
   
   .stepper-step {
@@ -1000,14 +1000,14 @@ textarea.form-input {
   }
   
   .stepper-circle {
-    width: 28px;
-    height: 28px;
-    font-size: 0.6875rem;
+    width: 30px;
+    height: 30px;
+    font-size: 0.7rem;
   }
   
   .stepper-line {
-    flex: 0 0 18px;
-    width: 18px;
+    flex: 0 0 22px;
+    width: 22px;
     margin-top: 15px;
   }
   
