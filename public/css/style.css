@@ -984,6 +984,7 @@ textarea.form-input {
 @media (max-width: 640px) {
   .booking-page {
     padding: 1.5rem 1rem;
+    justify-content: flex-start; /* on phones, content starts near top instead of vertically centering */
   }
   
   .stepper-line {
