@@ -64,6 +64,7 @@ body {
   width: 100%;
   max-width: 700px;
   margin-bottom: 2rem;
+  min-width: 0; /* allow shrinking inside flex */
 }
 
 .stepper {
@@ -984,25 +985,35 @@ textarea.form-input {
 @media (max-width: 640px) {
   .booking-page {
     padding: 1.5rem 1rem;
-    justify-content: flex-start; /* on phones, content starts near top instead of vertically centering */
+    justify-content: flex-start;
+    overflow-x: hidden;
+  }
+  
+  /* Shrink stepper to fit narrow viewports (no horizontal scroll) */
+  .stepper {
+    gap: 4px;
+  }
+  
+  .stepper-step {
+    flex: 0 0 28px;
+    min-width: 28px;
+  }
+  
+  .stepper-circle {
+    width: 28px;
+    height: 28px;
+    font-size: 0.6875rem;
   }
   
   .stepper-line {
-    width: 40px;
+    flex: 0 0 18px;
+    width: 18px;
+    margin-top: 15px;
   }
   
   .stepper-label {
     font-size: 0.5rem;
-  }
-  
-  .stepper-circle {
-    width: 32px;
-    height: 32px;
-    font-size: 0.75rem;
-  }
-  
-  .stepper-line {
-    margin-top: 15px;
+    margin-top: 4px;
   }
   
   .card {
