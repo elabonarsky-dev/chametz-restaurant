@@ -982,7 +982,7 @@ textarea.form-input {
 
 /* ============ RESPONSIVE ============ */
 
-@media (max-width: 640px) {
+@media (max-width: 450px) {
   .booking-page {
     padding: 1.5rem 1rem;
     justify-content: flex-start;
@@ -1014,6 +1014,7 @@ textarea.form-input {
   .stepper-label {
     font-size: 0.5rem;
     margin-top: 4px;
+    visibility: hidden;
   }
   
   .card {
