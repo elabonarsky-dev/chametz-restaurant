@@ -70,13 +70,17 @@ body {
   display: flex;
   align-items: flex-start;
   justify-content: center;
+  gap: 12px;
 }
 
+/* Fixed width so every point sits in the same-sized cell = even spacing */
 .stepper-step {
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
+  flex: 0 0 56px;
+  min-width: 56px;
 }
 
 .stepper-circle {
@@ -118,15 +122,16 @@ body {
   color: var(--c-primary);
 }
 
+/* Fixed width so every line segment has the same length; gap handles point-to-line distance */
 .stepper-line {
-  width: 80px;
+  flex: 0 0 72px;
+  width: 72px;
   height: 2px;
   background: var(--c-border);
-  margin: 0 6px;
+  margin: 0;
   margin-top: 17px;
   position: relative;
   z-index: 1;
-  flex-shrink: 0;
 }
 
 .stepper-line.completed {
