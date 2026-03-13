@@ -122,10 +122,11 @@ body {
   width: 80px;
   height: 2px;
   background: var(--c-border);
-  margin: 0 -8px;
+  margin: 0 6px;
   margin-top: 17px;
   position: relative;
   z-index: 1;
+  flex-shrink: 0;
 }
 
 .stepper-line.completed {
