@@ -2,6 +2,15 @@
 
 A production-ready restaurant booking tool built with Netlify Functions, PostgreSQL, and Stripe. Designed to be embedded on a Squarespace website.
 
+## Quick local setup (Step A)
+
+1. **Install:** `npm install`
+2. **Env:** A `.env` file exists; edit it with your values (see below).
+3. **PostgreSQL:** Get a DB URL from [Neon](https://neon.tech) or [Supabase](https://supabase.com), put it in `.env` as `DATABASE_URL`, then run `npm run db:init`.
+4. **Stripe:** Put your test secret key in `.env` as `STRIPE_SECRET_KEY` (get from [Stripe Dashboard](https://dashboard.stripe.com/apikeys)). For local payment testing you can use `STRIPE_WEBHOOK_SECRET=whsec_placeholder` until you add a webhook.
+5. **Admin:** Set `ADMIN_SECRET` in `.env` to any password you’ll use to sign in to `/admin/`.
+6. **Run:** `npm run dev` (or `npx netlify dev`). Open http://localhost:8888 for booking, http://localhost:8888/admin/ for admin.
+
 ## Architecture
 
 ```
@@ -79,15 +88,13 @@ npm install
 
 ### 3. Set Up PostgreSQL
 
-Create a new PostgreSQL database and run the schema:
+Create a new PostgreSQL database (e.g. [Neon](https://neon.tech) or [Supabase](https://supabase.com) free tier). Then in the project root, ensure your `.env` has the correct `DATABASE_URL` and run:
 
 ```bash
-# Set your database URL
-export DATABASE_URL="postgresql://user:password@host:5432/restaurant_booking"
-
-# Initialize the database
-node db/init.js
+npm run db:init
 ```
+
+(This loads `.env` automatically via dotenv.)
 
 ### 4. Set Up Stripe
 

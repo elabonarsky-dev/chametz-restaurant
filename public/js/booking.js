@@ -19,7 +19,37 @@ const state = {
 };
 
 let calendarMonth, calendarYear;
-let stripe, cardElement;
+let stripe, stripeElements, cardElement;
+
+// ─── Dates info cache (from admin settings) ───────────────────
+// Key: "YYYY-M" → { closed: Set<YYYY-MM-DD>, special: Map<YYYY-MM-DD, notes> }
+const datesInfoCache = {};
+
+async function loadDatesInfo(year, month) {
+  const key = `${year}-${month}`;
+  if (datesInfoCache[key] !== undefined) return; // already fetched
+  datesInfoCache[key] = { closed: new Set(), special: new Map(), booked: new Map(), defaultLimit: 0 }; // placeholder
+  try {
+    const res = await fetch(`${API_BASE}/manage-dates?year=${year}&month=${month + 1}`);
+    if (res.ok) {
+      const data = await res.json();
+      const closed = new Set();
+      const special = new Map();
+      const booked = new Map(); // dateStr → { count, max }
+      const defaultLimit = data.default_limit || 0;
+      (data.dates || []).forEach(d => {
+        const dateStr = String(d.date).split('T')[0];
+        if (d.is_open === false) closed.add(dateStr);
+        if (d.is_special_event) special.set(dateStr, d.notes || 'Special Event');
+        // Store booking count & limit for every day that has a DB row
+        const max = d.max_guests || defaultLimit;
+        const count = d.booked_count || 0;
+        booked.set(dateStr, { count, max });
+      });
+      datesInfoCache[key] = { closed, special, booked, defaultLimit };
+    }
+  } catch (_) { /* silent — calendar works without admin data */ }
+}
 
 // ─── Initialization ───────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -42,7 +72,9 @@ function goToStep(step) {
   updateStepper(step);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
-  if (step === 2) renderCalendar();
+  if (step === 2) {
+    loadDatesInfo(calendarYear, calendarMonth).then(() => renderCalendar());
+  }
   if (step === 4) initPayment();
 }
 
@@ -155,17 +187,45 @@ function renderCalendar() {
     html += '<div class="calendar-day empty"></div>';
   }
 
+  const cacheKey = `${calendarYear}-${calendarMonth}`;
+  const { closed: closedSet, special: specialMap, booked: bookedMap = new Map() } =
+    datesInfoCache[cacheKey] || { closed: new Set(), special: new Map(), booked: new Map() };
+
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(calendarYear, calendarMonth, d);
     const dateStr = formatDate(date);
     const isSelected = state.selectedDates.includes(dateStr);
     const isPast = date < today;
+    const isClosed = closedSet.has(dateStr);
+    const isSpecial = specialMap.has(dateStr);
+
+    // Fully-booked dates are disabled like closed dates
+    const bookedInfo = bookedMap.get(dateStr);
+    const isFullyBooked = bookedInfo && bookedInfo.count >= bookedInfo.max;
+    const isDisabled = isPast || isClosed || isFullyBooked;
 
     let classes = 'calendar-day';
-    if (isPast) classes += ' disabled';
+    if (isDisabled) classes += ' disabled';
     if (isSelected) classes += ' selected';
+    if (isClosed && !isPast) classes += ' closed-by-admin';
+    if (isSpecial && !isClosed && !isPast) classes += ' special-event';
+    if (isFullyBooked && !isClosed && !isPast) classes += ' fully-booked';
 
-    html += `<div class="${classes}" onclick="toggleDate('${dateStr}', ${isPast})">${d}</div>`;
+    // data-tooltip carries the event name; CSS shows it on :hover
+    const notes = isSpecial ? specialMap.get(dateStr) : '';
+    const tooltipAttr = isSpecial && !isClosed && !isPast
+      ? ` data-tooltip="${notes.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}"`
+      : '';
+    const starHtml = isSpecial && !isClosed && !isPast
+      ? '<span class="day-event-star">★</span>'
+      : '';
+
+    // Booking counter in top-right corner
+    const counterHtml = bookedInfo && !isPast
+      ? `<span class="bk-day-counter${isFullyBooked ? ' bk-counter-full' : ''}">${bookedInfo.count}/${bookedInfo.max}</span>`
+      : '';
+
+    html += `<div class="${classes}"${tooltipAttr} onclick="toggleDate('${dateStr}', ${isDisabled})">${counterHtml}${d}${starHtml}</div>`;
   }
 
   html += '</div>';
@@ -176,13 +236,13 @@ function renderCalendar() {
 function prevMonth() {
   calendarMonth--;
   if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
-  renderCalendar();
+  loadDatesInfo(calendarYear, calendarMonth).then(() => renderCalendar());
 }
 
 function nextMonth() {
   calendarMonth++;
   if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
-  renderCalendar();
+  loadDatesInfo(calendarYear, calendarMonth).then(() => renderCalendar());
 }
 
 function toggleDate(dateStr, isPast) {
@@ -244,14 +304,110 @@ function removeGuest(index) {
   renderGuestCards();
 }
 
+/** Birthday: type 11081982 → 11/08/1982 */
+function formatBirthdayFromDigits(raw) {
+  const d = String(raw).replace(/\D/g, '').slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+}
+
+/** Phone: type 14154843205 → +1 (415) 484-3205 */
+function formatPhoneFromDigits(raw) {
+  let d = String(raw).replace(/\D/g, '').slice(0, 11);
+  if (!d) return '';
+  if (d[0] === '1') {
+    const rest = d.slice(1);
+    if (rest.length === 0) return '+1 ';
+    if (rest.length <= 3) return `+1 (${rest}`;
+    if (rest.length <= 6) return `+1 (${rest.slice(0, 3)}) ${rest.slice(3)}`;
+    return `+1 (${rest.slice(0, 3)}) ${rest.slice(3, 6)}-${rest.slice(6)}`;
+  }
+  if (d.length <= 3) return `+1 (${d}`;
+  if (d.length <= 6) return `+1 (${d.slice(0, 3)}) ${d.slice(3)}`;
+  return `+1 (${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6, 10)}`;
+}
+
+function guestCanSelectAlcoholic(birthday) {
+  const digits = (birthday || '').replace(/\D/g, '');
+  if (digits.length !== 8) return false;
+  const formatted = formatBirthdayFromDigits(digits);
+  const age = calcAge(formatted);
+  return age >= 21;
+}
+
+function handleBirthdayInput(index, input) {
+  const formatted = formatBirthdayFromDigits(input.value);
+  if (input.value !== formatted) input.value = formatted;
+  state.guests[index].birthday = formatted;
+  updateGuestBeverageUI(index);
+}
+
+function handlePhoneInput(index, input) {
+  const formatted = formatPhoneFromDigits(input.value);
+  if (input.value !== formatted) input.value = formatted;
+  state.guests[index].phone = formatted;
+}
+
+function updateGuestBeverageUI(index) {
+  const container = document.getElementById('guest-cards-container');
+  if (!container) return;
+  const card = container.querySelector(`[data-guest-index="${index}"]`);
+  if (!card) return;
+  const alcoholicBtn = card.querySelector('[data-pairing="alcoholic"]');
+  const nonAlcoholicBtn = card.querySelector('[data-pairing="non-alcoholic"]');
+  const warningEl = card.querySelector('[data-age-hint]');
+  const g = state.guests[index];
+  const can = guestCanSelectAlcoholic(g.birthday);
+
+  if (!can && g.beverage_pairing === 'alcoholic') {
+    g.beverage_pairing = 'non-alcoholic';
+  }
+
+  if (alcoholicBtn) {
+    alcoholicBtn.disabled = !can;
+    alcoholicBtn.classList.toggle('toggle-btn-disabled', !can);
+    alcoholicBtn.title = can ? '' : 'Must be 21 or older for alcoholic beverage pairing.';
+    alcoholicBtn.classList.toggle('active', g.beverage_pairing === 'alcoholic');
+  }
+  if (nonAlcoholicBtn) {
+    nonAlcoholicBtn.classList.toggle('active', g.beverage_pairing === 'non-alcoholic');
+  }
+
+  if (warningEl) {
+    const digits = (g.birthday || '').replace(/\D/g, '');
+    const age = digits.length === 8 ? calcAge(g.birthday) : -1;
+    warningEl.classList.remove('age-hint-info');
+    if (digits.length === 8 && age >= 0 && age < 21) {
+      warningEl.textContent = 'Guest must be 21 or older for alcoholic pairing.';
+      warningEl.classList.remove('hidden');
+    } else if (digits.length > 0 && digits.length < 8) {
+      warningEl.textContent = 'Enter full date of birth (8 digits) to enable alcoholic pairing.';
+      warningEl.classList.add('age-hint-info');
+      warningEl.classList.remove('hidden');
+    } else {
+      warningEl.classList.add('hidden');
+    }
+  }
+}
+
 function renderGuestCards() {
   const container = document.getElementById('guest-cards-container');
   if (!container) return;
 
+  state.guests.forEach((g) => {
+    if (!guestCanSelectAlcoholic(g.birthday) && g.beverage_pairing === 'alcoholic') {
+      g.beverage_pairing = 'non-alcoholic';
+    }
+  });
+
   container.innerHTML = state.guests.map((guest, i) => {
     const isPrimary = i === 0;
+    const canAlcoholic = guestCanSelectAlcoholic(guest.birthday);
+    const bVal = guest.birthday ? escapeHtml(guest.birthday) : '';
+    const phoneVal = guest.phone ? escapeHtml(guest.phone) : '';
     return `
-      <div class="guest-card">
+      <div class="guest-card" data-guest-index="${i}">
         <div class="guest-card-header">
           <div>
             <div class="guest-card-title">Guest ${i + 1}${isPrimary ? ' (Primary)' : ''}</div>
@@ -271,7 +427,8 @@ function renderGuestCards() {
           </div>
           <div class="form-group">
             <label class="form-label">Birthday <span class="required">*</span></label>
-            <input type="text" class="form-input" placeholder="mm/dd/yyyy" value="${guest.birthday}" onchange="updateGuest(${i}, 'birthday', this.value)">
+            <input type="text" class="form-input" inputmode="numeric" autocomplete="bday" placeholder="mm/dd/yyyy" value="${bVal}"
+              oninput="handleBirthdayInput(${i}, this)" onblur="state.guests[${i}].birthday=this.value; updateGuestBeverageUI(${i})">
           </div>
         </div>
 
@@ -279,7 +436,8 @@ function renderGuestCards() {
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Phone Number <span class="required">*</span></label>
-              <input type="tel" class="form-input" placeholder="+1 (415) 484-3205" value="${escapeHtml(guest.phone || '')}" onchange="updateGuest(${i}, 'phone', this.value)">
+              <input type="tel" class="form-input" inputmode="numeric" autocomplete="tel" placeholder="+1 (415) 484-3205" value="${phoneVal}"
+                oninput="handlePhoneInput(${i}, this)" onblur="state.guests[${i}].phone=this.value">
             </div>
             <div class="form-group">
               <label class="form-label">Email <span class="required">*</span></label>
@@ -291,14 +449,17 @@ function renderGuestCards() {
         <div class="form-group">
           <label class="form-label">Beverage Pairing <span class="required">*</span></label>
           <div class="toggle-group">
-            <button type="button" class="toggle-btn ${guest.beverage_pairing === 'alcoholic' ? 'active' : ''}" onclick="updateGuest(${i}, 'beverage_pairing', 'alcoholic')">
+            <button type="button" data-pairing="alcoholic" class="toggle-btn ${guest.beverage_pairing === 'alcoholic' ? 'active' : ''} ${!canAlcoholic ? 'toggle-btn-disabled' : ''}"
+              ${!canAlcoholic ? 'disabled' : ''} title="${!canAlcoholic ? 'Must be 21 or older for alcoholic beverage pairing.' : ''}"
+              onclick="updateGuest(${i}, 'beverage_pairing', 'alcoholic')">
               🍷 Alcoholic
             </button>
-            <button type="button" class="toggle-btn ${guest.beverage_pairing === 'non-alcoholic' ? 'active' : ''}" onclick="updateGuest(${i}, 'beverage_pairing', 'non-alcoholic')">
+            <button type="button" data-pairing="non-alcoholic" class="toggle-btn ${guest.beverage_pairing === 'non-alcoholic' ? 'active' : ''}"
+              onclick="updateGuest(${i}, 'beverage_pairing', 'non-alcoholic')">
               🥤 Non-alcoholic
             </button>
           </div>
-          <div id="age-warning-${i}" class="alert alert-error hidden mt-1"></div>
+          <div data-age-hint id="age-warning-${i}" class="alert mt-1 ${canAlcoholic ? 'hidden' : ((guest.birthday || '').replace(/\D/g, '').length < 8 ? 'age-hint-info' : 'alert-error')}" style="font-size:0.8125rem;">${!canAlcoholic && (guest.birthday || '').replace(/\D/g, '').length < 8 ? 'Enter full date of birth (8 digits) to enable alcoholic pairing.' : (!canAlcoholic && (guest.birthday || '').replace(/\D/g, '').length === 8 ? 'Guest must be 21 or older for alcoholic pairing.' : '')}</div>
         </div>
 
         <div class="form-group">
@@ -311,63 +472,30 @@ function renderGuestCards() {
 }
 
 function updateGuest(index, field, value) {
+  if (field === 'beverage_pairing' && value === 'alcoholic' && !guestCanSelectAlcoholic(state.guests[index].birthday)) {
+    return;
+  }
   state.guests[index][field] = value;
 
   if (field === 'beverage_pairing') {
-    const guest = state.guests[index];
-    const warningEl = document.getElementById(`age-warning-${index}`);
-    
-    if (warningEl && guest.birthday && value === 'alcoholic') {
-      const age = calcAge(guest.birthday);
-      if (age >= 0 && age < 21) {
-        warningEl.textContent = `Guest must be 21 or older for alcoholic pairing. Switching to non-alcoholic.`;
-        warningEl.classList.remove('hidden');
-        state.guests[index].beverage_pairing = 'non-alcoholic';
-      } else {
-        warningEl.classList.add('hidden');
-      }
-    } else if (warningEl) {
-      warningEl.classList.add('hidden');
-    }
-    
-    updateBeverageToggle(index);
+    updateGuestBeverageUI(index);
     return;
-  }
-
-  if (field === 'birthday') {
-    const guest = state.guests[index];
-    const warningEl = document.getElementById(`age-warning-${index}`);
-    if (warningEl && guest.birthday && guest.beverage_pairing === 'alcoholic') {
-      const age = calcAge(guest.birthday);
-      if (age >= 0 && age < 21) {
-        warningEl.textContent = `Guest must be 21 or older for alcoholic pairing. Switching to non-alcoholic.`;
-        warningEl.classList.remove('hidden');
-        state.guests[index].beverage_pairing = 'non-alcoholic';
-        updateBeverageToggle(index);
-      } else {
-        warningEl.classList.add('hidden');
-      }
-    }
   }
 }
 
-function updateBeverageToggle(index) {
-  const guest = state.guests[index];
-  const container = document.getElementById('guest-cards-container');
-  const guestCards = container.querySelectorAll('.guest-card');
-  
-  if (guestCards[index]) {
-    const toggleBtns = guestCards[index].querySelectorAll('.toggle-btn');
-    toggleBtns.forEach(btn => {
-      btn.classList.remove('active');
-      if (btn.textContent.includes('Alcoholic') && !btn.textContent.includes('Non') && guest.beverage_pairing === 'alcoholic') {
-        btn.classList.add('active');
-      }
-      if (btn.textContent.includes('Non-alcoholic') && guest.beverage_pairing === 'non-alcoholic') {
-        btn.classList.add('active');
-      }
-    });
-  }
+/** YYYY-MM-DD for API / PostgreSQL */
+function birthdayToApiFormat(mmddyyyy) {
+  const parts = (mmddyyyy || '').split('/');
+  if (parts.length !== 3) return mmddyyyy;
+  const m = parts[0].padStart(2, '0');
+  const d = parts[1].padStart(2, '0');
+  const y = parts[2];
+  if (y.length !== 4) return mmddyyyy;
+  return `${y}-${m}-${d}`;
+}
+
+function phoneDigitsCount(phone) {
+  return (phone || '').replace(/\D/g, '').length;
 }
 
 function calcAge(birthday) {
@@ -398,8 +526,12 @@ function validateAndContinueToPayment() {
 
   state.guests.forEach((g, i) => {
     if (!g.name || g.name.trim().length < 2) errors.push(`Guest ${i+1}: Name is required.`);
-    if (!g.birthday) errors.push(`Guest ${i+1}: Birthday is required.`);
-    if (i === 0 && !g.phone) errors.push('Primary guest: Phone number is required.');
+    const bdDigits = (g.birthday || '').replace(/\D/g, '');
+    if (bdDigits.length !== 8) errors.push(`Guest ${i+1}: Enter a complete birthday (mm/dd/yyyy).`);
+    else if (calcAge(g.birthday) < 0) errors.push(`Guest ${i+1}: Invalid birthday.`);
+    if (i === 0 && phoneDigitsCount(g.phone) < 10) {
+      errors.push('Primary guest: Enter a complete US phone number (10 digits, or 11 starting with 1).');
+    }
     if (i === 0 && !g.email) errors.push('Primary guest: Email is required.');
     const age = calcAge(g.birthday);
     if (age >= 0 && g.beverage_pairing === 'alcoholic' && age < 21) {
@@ -448,8 +580,8 @@ async function initPayment() {
     state.stripePaymentId = data.payment_intent_id;
     state.depositAmount = data.amount;
 
-    const elements = stripe.elements({ clientSecret: data.client_secret });
-    cardElement = elements.create('payment');
+    stripeElements = stripe.elements({ clientSecret: data.client_secret });
+    cardElement = stripeElements.create('payment');
     document.getElementById('stripe-card-element').innerHTML = '';
     cardElement.mount('#stripe-card-element');
 
@@ -480,8 +612,10 @@ async function handlePayment() {
 
   try {
     const { error, paymentIntent } = await stripe.confirmPayment({
-      elements: cardElement._elements,
-      confirmParams: {},
+      elements: stripeElements,
+      confirmParams: {
+        return_url: window.location.origin + window.location.pathname + '#payment',
+      },
       redirect: 'if_required',
     });
 
@@ -489,18 +623,19 @@ async function handlePayment() {
       hideLoading();
       showError('card-errors', error.message);
       btn.disabled = false;
-      btn.innerHTML = '🔒 Pay Deposit & Confirm';
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Pay Deposit & Confirm';
       return;
     }
 
-    if (paymentIntent.status === 'succeeded') {
+    if (paymentIntent && paymentIntent.status === 'succeeded') {
       await createBooking();
     }
   } catch (err) {
     hideLoading();
-    showError('card-errors', 'Payment failed. Please try again.');
+    const message = (err && err.message) ? err.message : 'Payment failed. Please try again.';
+    showError('card-errors', message);
     btn.disabled = false;
-    btn.innerHTML = '🔒 Pay Deposit & Confirm';
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Pay Deposit & Confirm';
   }
 }
 
@@ -519,7 +654,7 @@ async function createBooking() {
     email: state.guests[0].email || '',
     guests: state.guests.map(g => ({
       name: g.name,
-      birthday: g.birthday,
+      birthday: birthdayToApiFormat(g.birthday),
       beverage_pairing: g.beverage_pairing,
       allergies: g.allergies,
     })),
@@ -552,13 +687,20 @@ function showConfirmation() {
   document.getElementById('confirm-address').textContent = state.resolvedAddress || state.address;
   document.getElementById('confirm-dates').textContent = state.selectedDates.map(d => {
     const parts = d.split('-');
-    return new Date(parts[0], parts[1]-1, parts[2]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+    return formatConfirmDate(dateObj);
   }).join(', ');
   document.getElementById('confirm-guests').textContent = `${state.guests.length} Guest${state.guests.length > 1 ? 's' : ''}`;
   goToStep(5);
 }
 
 // ─── Utilities ────────────────────────────────────────────────
+/** e.g. Mar 17 2026 (no comma before year) */
+function formatConfirmDate(date) {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[date.getMonth()]} ${date.getDate()} ${date.getFullYear()}`;
+}
+
 function formatDate(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');

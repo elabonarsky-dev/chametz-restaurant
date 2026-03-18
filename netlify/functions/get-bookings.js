@@ -1,5 +1,5 @@
 const { query } = require('../../utils/db');
-const { verifyAdmin, unauthorizedResponse, corsHeaders } = require('../../utils/auth');
+const { verifyAdminAsync, unauthorizedResponse, corsHeaders } = require('../../utils/auth');
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -14,7 +14,7 @@ exports.handler = async (event) => {
     };
   }
 
-  if (!verifyAdmin(event.headers)) {
+  if (!await verifyAdminAsync(event.headers)) {
     return unauthorizedResponse();
   }
 
@@ -52,7 +52,7 @@ exports.handler = async (event) => {
         (SELECT COUNT(*) FROM guests g WHERE g.booking_id = b.id) as guest_count,
         (SELECT g.name FROM guests g WHERE g.booking_id = b.id AND g.is_primary = true LIMIT 1) as primary_guest
        FROM bookings b${whereClause}
-       ORDER BY b.created_at DESC
+       ORDER BY b.created_at ASC
        LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params
     );

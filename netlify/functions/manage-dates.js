@@ -1,5 +1,5 @@
 const { query } = require('../../utils/db');
-const { verifyAdmin, unauthorizedResponse, corsHeaders } = require('../../utils/auth');
+const { verifyAdminAsync, unauthorizedResponse, corsHeaders } = require('../../utils/auth');
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -20,7 +20,7 @@ exports.handler = async (event) => {
   }
 
   // POST/PUT require admin auth
-  if (!verifyAdmin(event.headers)) {
+  if (!await verifyAdminAsync(event.headers)) {
     return unauthorizedResponse();
   }
 
@@ -37,31 +37,54 @@ async function handleGet(event) {
     const year = event.queryStringParameters?.year;
     const onlyOpen = event.queryStringParameters?.only_open === 'true';
 
-    let sql = 'SELECT * FROM available_dates';
+    // Include per-day booking count (excludes cancelled/refunded bookings)
+    let sql = `
+      SELECT
+        ad.*,
+        COALESCE(
+          (SELECT COUNT(DISTINCT b.id)::int
+           FROM bookings b
+           WHERE b.preferred_dates @> jsonb_build_array(ad.date::text)
+             AND b.status NOT IN ('cancelled', 'refunded')
+          ), 0
+        ) AS booked_count
+      FROM available_dates ad
+    `;
+
     const params = [];
     const conditions = [];
 
     if (month && year) {
       params.push(parseInt(year, 10), parseInt(month, 10));
-      conditions.push(`EXTRACT(YEAR FROM date) = $${params.length - 1} AND EXTRACT(MONTH FROM date) = $${params.length}`);
+      conditions.push(`EXTRACT(YEAR FROM ad.date) = $${params.length - 1} AND EXTRACT(MONTH FROM ad.date) = $${params.length}`);
     }
 
     if (onlyOpen) {
-      conditions.push('is_open = true');
+      conditions.push('ad.is_open = true');
     }
 
     if (conditions.length > 0) {
       sql += ` WHERE ${conditions.join(' AND ')}`;
     }
 
-    sql += ' ORDER BY date ASC';
+    sql += ' ORDER BY ad.date ASC';
 
     const result = await query(sql, params);
+
+    // Fetch the global default reservation limit from settings
+    let defaultLimit = 0;
+    try {
+      const limRes = await query(
+        "SELECT value FROM app_settings WHERE key = 'reservation_limit' LIMIT 1",
+        []
+      );
+      if (limRes.rows.length > 0) defaultLimit = parseInt(limRes.rows[0].value, 10) || 0;
+    } catch (_) {}
 
     return {
       statusCode: 200,
       headers: corsHeaders(),
-      body: JSON.stringify({ dates: result.rows }),
+      body: JSON.stringify({ dates: result.rows, default_limit: defaultLimit }),
     };
   } catch (err) {
     console.error('manage-dates GET error:', err.message);
@@ -99,7 +122,7 @@ async function handleCreate(event) {
       [
         date,
         is_open !== undefined ? is_open : true,
-        max_guests || 45,
+        max_guests || 0,
         is_special_event || false,
         notes || '',
       ]

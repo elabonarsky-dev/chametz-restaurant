@@ -1,5 +1,5 @@
 const { query } = require('../../utils/db');
-const { verifyAdmin, unauthorizedResponse, corsHeaders } = require('../../utils/auth');
+const { verifyAdminAsync, unauthorizedResponse, corsHeaders } = require('../../utils/auth');
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -14,7 +14,7 @@ exports.handler = async (event) => {
     };
   }
 
-  if (!verifyAdmin(event.headers)) {
+  if (!await verifyAdminAsync(event.headers)) {
     return unauthorizedResponse();
   }
 

@@ -169,7 +169,7 @@ body {
 
 .page-subtitle {
   color: var(--c-text-secondary);
-  font-size: 0.9375rem;
+  font-size: 0.9rem;
   line-height: 1.6;
   margin-bottom: 1.5rem;
 }
@@ -387,6 +387,25 @@ textarea.form-input {
   border-color: var(--c-primary);
 }
 
+.toggle-btn:disabled,
+.toggle-btn.toggle-btn-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.toggle-btn:disabled.active,
+.toggle-btn.toggle-btn-disabled.active {
+  background: var(--c-border);
+  color: var(--c-text-muted);
+}
+
+.age-hint-info {
+  background: var(--c-bg) !important;
+  color: var(--c-text-secondary) !important;
+  border: 1px solid var(--c-border);
+}
+
 /* ============ SERVICE AREA SCREENS ============ */
 
 .service-screen {
@@ -558,6 +577,33 @@ textarea.form-input {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Booking counter in top-right corner of public booking calendar */
+.bk-day-counter {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 0.5rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 1px 2px;
+  border-radius: 2px;
+  background: rgba(0,0,0,0.07);
+  color: #6B7280;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.bk-day-counter.bk-counter-full {
+  background: #DC2626;
+  color: #fff;
+}
+.calendar-day.fully-booked {
+  background: #F3F4F6;
+  color: #9CA3AF;
+  cursor: not-allowed;
 }
 
 .calendar-day:hover:not(.disabled):not(.empty) {
@@ -573,6 +619,81 @@ textarea.form-input {
 .calendar-day.disabled {
   color: var(--c-text-muted);
   cursor: not-allowed;
+}
+
+.calendar-day.closed-by-admin {
+  background: #FEF2F2;
+  color: #FCA5A5;
+}
+
+.calendar-day.closed-by-admin::after {
+  content: '✕';
+  font-size: 0.45rem;
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  color: #FCA5A5;
+}
+
+/* ── Special-event days (set by admin) ── */
+.calendar-day.special-event {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.calendar-day.special-event:hover:not(.disabled) {
+  background: #FDE68A;
+}
+
+.day-event-star {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  font-size: 0.45rem;
+  color: #D97706;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* ── Tooltip (data-tooltip attribute) ── */
+.calendar-day[data-tooltip]::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(17, 24, 39, 0.92);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 200;
+  transition: opacity 0.15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+
+/* small arrow below tooltip bubble */
+.calendar-day[data-tooltip]::after {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgba(17, 24, 39, 0.92);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 200;
+  transition: opacity 0.15s;
+}
+
+.calendar-day[data-tooltip]:hover::before,
+.calendar-day[data-tooltip]:hover::after {
+  opacity: 1;
 }
 
 .calendar-day.empty {
