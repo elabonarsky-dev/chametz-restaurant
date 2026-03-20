@@ -211,6 +211,15 @@
                     <span id="detail-dates"></span>
                   </div>
                 </div>
+                <div class="detail-item">
+                  <div class="detail-label">Confirmed Date</div>
+                  <div class="detail-value">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span id="detail-confirmed-date" style="font-weight:600;"></span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -318,7 +327,7 @@
                   </svg>
                   <div>
                     <div class="day-setting-label">Availability Status</div>
-                    <div class="day-setting-desc">Currently accepting bookings</div>
+                    <div class="day-setting-desc" id="availability-desc">Closed — toggle to open</div>
                   </div>
                 </div>
                 <label class="toggle-switch">
@@ -384,14 +393,10 @@
               </svg>
               <h3 class="settings-section-title">General Venue Settings</h3>
             </div>
-            <div class="settings-form-row">
+            <div class="settings-form-row full">
               <div class="form-group">
                 <label class="form-label">Venue Name</label>
                 <input type="text" class="form-input" id="setting-venue-name" placeholder="Your restaurant name">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Cuisine Type</label>
-                <input type="text" class="form-input" id="setting-cuisine" placeholder="e.g. Modern American">
               </div>
             </div>
             <div class="settings-form-row full">

@@ -28,25 +28,26 @@ const datesInfoCache = {};
 async function loadDatesInfo(year, month) {
   const key = `${year}-${month}`;
   if (datesInfoCache[key] !== undefined) return; // already fetched
-  datesInfoCache[key] = { closed: new Set(), special: new Map(), booked: new Map(), defaultLimit: 0 }; // placeholder
+  // Default: empty open set means ALL dates are closed until we hear back from the API
+  datesInfoCache[key] = { open: new Set(), special: new Map(), booked: new Map(), defaultLimit: 45 };
   try {
     const res = await fetch(`${API_BASE}/manage-dates?year=${year}&month=${month + 1}`);
     if (res.ok) {
       const data = await res.json();
-      const closed = new Set();
+      const open = new Set();    // only dates explicitly set is_open = true
       const special = new Map();
-      const booked = new Map(); // dateStr → { count, max }
-      const defaultLimit = data.default_limit || 0;
+      const booked = new Map();  // dateStr → { count, max }
+      const defaultLimit = data.default_limit || 45;
       (data.dates || []).forEach(d => {
         const dateStr = String(d.date).split('T')[0];
-        if (d.is_open === false) closed.add(dateStr);
-        if (d.is_special_event) special.set(dateStr, d.notes || 'Special Event');
-        // Store booking count & limit for every day that has a DB row
+        if (d.is_open === true) open.add(dateStr);
+        // Special events only matter if the date is open
+        if (d.is_special_event && d.is_open) special.set(dateStr, d.notes || 'Special Event');
         const max = d.max_guests || defaultLimit;
         const count = d.booked_count || 0;
         booked.set(dateStr, { count, max });
       });
-      datesInfoCache[key] = { closed, special, booked, defaultLimit };
+      datesInfoCache[key] = { open, special, booked, defaultLimit };
     }
   } catch (_) { /* silent — calendar works without admin data */ }
 }
@@ -124,7 +125,20 @@ async function checkAddress() {
     hideLoading();
 
     if (!res.ok) {
-      showError('address-error', data.error || 'Failed to check address.');
+      const msg = data.error || 'Failed to check address.';
+      if (data.address_not_found) {
+        // Render as HTML so the email becomes a clickable link
+        const errEl = document.getElementById('address-error');
+        if (errEl) {
+          errEl.innerHTML = msg.replace(
+            'info@thechametz.com',
+            '<a href="mailto:info@thechametz.com" style="color:inherit;font-weight:600;">info@thechametz.com</a>'
+          );
+          errEl.classList.remove('hidden');
+        }
+      } else {
+        showError('address-error', msg);
+      }
       return;
     }
 
@@ -188,28 +202,30 @@ function renderCalendar() {
   }
 
   const cacheKey = `${calendarYear}-${calendarMonth}`;
-  const { closed: closedSet, special: specialMap, booked: bookedMap = new Map() } =
-    datesInfoCache[cacheKey] || { closed: new Set(), special: new Map(), booked: new Map() };
+  const { open: openSet = new Set(), special: specialMap = new Map(), booked: bookedMap = new Map() } =
+    datesInfoCache[cacheKey] || {};
 
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(calendarYear, calendarMonth, d);
     const dateStr = formatDate(date);
     const isSelected = state.selectedDates.includes(dateStr);
     const isPast = date < today;
-    const isClosed = closedSet.has(dateStr);
+    // A date is only open if it's explicitly in the open set
+    const isOpen = openSet.has(dateStr);
+    const isClosed = !isOpen;
     const isSpecial = specialMap.has(dateStr);
 
-    // Fully-booked dates are disabled like closed dates
+    // Fully-booked dates are also disabled
     const bookedInfo = bookedMap.get(dateStr);
-    const isFullyBooked = bookedInfo && bookedInfo.count >= bookedInfo.max;
+    const isFullyBooked = isOpen && bookedInfo && bookedInfo.count >= bookedInfo.max;
     const isDisabled = isPast || isClosed || isFullyBooked;
 
     let classes = 'calendar-day';
     if (isDisabled) classes += ' disabled';
     if (isSelected) classes += ' selected';
     if (isClosed && !isPast) classes += ' closed-by-admin';
-    if (isSpecial && !isClosed && !isPast) classes += ' special-event';
-    if (isFullyBooked && !isClosed && !isPast) classes += ' fully-booked';
+    if (isSpecial && !isPast) classes += ' special-event';
+    if (isFullyBooked && !isPast) classes += ' fully-booked';
 
     // data-tooltip carries the event name; CSS shows it on :hover
     const notes = isSpecial ? specialMap.get(dateStr) : '';
@@ -250,7 +266,7 @@ function toggleDate(dateStr, isPast) {
   const idx = state.selectedDates.indexOf(dateStr);
   if (idx > -1) {
     state.selectedDates.splice(idx, 1);
-  } else if (state.selectedDates.length < 3) {
+  } else {
     state.selectedDates.push(dateStr);
   }
   renderCalendar();

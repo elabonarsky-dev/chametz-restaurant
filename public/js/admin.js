@@ -73,6 +73,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const wrap = document.getElementById('special-event-input-wrap');
     if (wrap) wrap.classList.toggle('hidden', !this.checked);
   });
+
+  // Availability toggle → update live description text
+  document.getElementById('availability-toggle').addEventListener('change', function () {
+    const desc = document.getElementById('availability-desc');
+    if (desc) desc.textContent = this.checked ? 'Currently accepting bookings' : 'Closed — toggle to open';
+  });
 });
 
 async function authenticate() {
@@ -300,7 +306,16 @@ function renderBookingDetails(booking) {
     ? booking.preferred_dates.map(d => formatAdminDate(d)).join(', ')
     : 'N/A';
   document.getElementById('detail-dates').textContent = dates;
-  
+
+  // Confirmed / finalized date
+  const confirmedEl = document.getElementById('detail-confirmed-date');
+  if (confirmedEl) {
+    confirmedEl.textContent = booking.confirmed_date
+      ? formatAdminDate(booking.confirmed_date)
+      : '—';
+    confirmedEl.style.color = booking.confirmed_date ? 'var(--c-primary)' : 'var(--c-text-muted)';
+  }
+
   document.getElementById('detail-deposit').textContent = `$${((booking.deposit_amount || 0) / 100).toFixed(2)}`;
   
   // Wire up Edit Booking button for this booking
@@ -465,14 +480,25 @@ function closeInvoiceModal() {
 }
 
 // ─── Edit Booking Modal ────────────────────────────────────────
+// Module-level state for the edit modal date list
+let _editDates = [];
+
 function openEditModal(booking) {
   const existing = document.getElementById('edit-booking-modal');
   if (existing) existing.remove();
 
+  // Build mutable dates list from booking
+  _editDates = Array.isArray(booking.preferred_dates)
+    ? [...booking.preferred_dates.map(d => String(d).split('T')[0])]
+    : [];
+
   const statuses = ['pending', 'confirmed', 'cancelled', 'refunded'];
-  const options = statuses.map(s =>
+  const statusOptions = statuses.map(s =>
     `<option value="${s}" ${booking.status === s ? 'selected' : ''}>${capitalizeFirst(s)}</option>`
   ).join('');
+
+  const guests = booking.guests || [];
+  const primaryGuest = guests.find(g => g.is_primary) || guests[0] || {};
 
   const modal = document.createElement('div');
   modal.id = 'edit-booking-modal';
@@ -488,30 +514,137 @@ function openEditModal(booking) {
         </button>
       </div>
       <div class="edit-modal-body">
+
+        <div class="edit-modal-section-title">Booking Status</div>
         <div class="form-group">
-          <label class="form-label">Booking Status</label>
-          <select class="form-input" id="edit-status-select">${options}</select>
+          <select class="form-input" id="edit-status-select">${statusOptions}</select>
         </div>
+
+        <div class="edit-modal-section-title">Contact Information</div>
+        <div class="edit-modal-row">
+          <div class="form-group">
+            <label class="form-label">Name (primary guest)</label>
+            <input type="text" class="form-input" id="edit-guest-name"
+              value="${(primaryGuest.name || '').replace(/"/g, '&quot;')}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-input" id="edit-email"
+              value="${(booking.email || '').replace(/"/g, '&quot;')}">
+          </div>
+        </div>
+        <div class="edit-modal-row">
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input type="tel" class="form-input" id="edit-phone"
+              value="${(booking.phone || '').replace(/"/g, '&quot;')}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Pickup Address</label>
+            <input type="text" class="form-input" id="edit-address"
+              value="${(booking.pickup_address || '').replace(/"/g, '&quot;')}">
+          </div>
+        </div>
+
+        <div class="edit-modal-section-title">Preferred Dates</div>
+        <div id="edit-dates-list" class="edit-dates-list"></div>
+        <div class="edit-dates-add">
+          <input type="date" class="form-input" id="edit-add-date-input">
+          <button class="btn btn-outline btn-sm" onclick="editAddDate()">+ Add Date</button>
+        </div>
+
+        <div class="edit-modal-section-title" style="margin-top:1rem;">Confirmed / Finalized Date</div>
+        <div class="form-group">
+          <select class="form-input" id="edit-confirmed-date"></select>
+          <p class="settings-field-hint">Select the single confirmed dining date from the preferred list, or leave blank.</p>
+        </div>
+
       </div>
       <div class="edit-modal-footer">
         <button class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveBookingEdit('${booking.id}')">Save Changes</button>
+        <button class="btn btn-primary" onclick="saveBookingEdit('${booking.id}', '${primaryGuest.id || ''}')">Save Changes</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
   modal.addEventListener('click', (e) => { if (e.target === modal) closeEditModal(); });
+
+  // Render the dates list and confirmed-date select
+  renderEditDatesList(booking.confirmed_date);
+}
+
+function renderEditDatesList(currentConfirmed) {
+  const list = document.getElementById('edit-dates-list');
+  const confirmSel = document.getElementById('edit-confirmed-date');
+  if (!list || !confirmSel) return;
+
+  list.innerHTML = _editDates.length === 0
+    ? '<p style="font-size:0.8125rem;color:var(--c-text-muted);margin:0 0 0.5rem;">No dates added yet.</p>'
+    : _editDates.map(d => `
+        <div class="edit-date-chip">
+          <span>${formatAdminDate(d)}</span>
+          <button class="edit-date-remove" onclick="editRemoveDate('${d}')" title="Remove">×</button>
+        </div>`).join('');
+
+  const confirmedVal = currentConfirmed
+    ? String(currentConfirmed).split('T')[0]
+    : (confirmSel.value || '');
+
+  confirmSel.innerHTML = '<option value="">— Not confirmed yet —</option>' +
+    _editDates.map(d => {
+      const sel = confirmedVal === d ? 'selected' : '';
+      return `<option value="${d}" ${sel}>${formatAdminDate(d)}</option>`;
+    }).join('');
+}
+
+function editAddDate() {
+  const input = document.getElementById('edit-add-date-input');
+  if (!input || !input.value) return;
+  const val = input.value; // YYYY-MM-DD
+  if (!_editDates.includes(val)) {
+    _editDates.push(val);
+    _editDates.sort();
+    renderEditDatesList(null);
+  }
+  input.value = '';
+}
+
+function editRemoveDate(dateStr) {
+  _editDates = _editDates.filter(d => d !== dateStr);
+  const confirmSel = document.getElementById('edit-confirmed-date');
+  const currentConfirmed = confirmSel ? confirmSel.value : null;
+  renderEditDatesList(currentConfirmed === dateStr ? null : currentConfirmed);
 }
 
 function closeEditModal() {
   const modal = document.getElementById('edit-booking-modal');
   if (modal) modal.remove();
+  _editDates = [];
 }
 
-async function saveBookingEdit(id) {
-  const status = document.getElementById('edit-status-select').value;
-  showLoading('Saving changes...');
+async function saveBookingEdit(id, primaryGuestId) {
+  const status        = document.getElementById('edit-status-select')?.value;
+  const email         = document.getElementById('edit-email')?.value?.trim() || '';
+  const phone         = document.getElementById('edit-phone')?.value?.trim() || '';
+  const pickup        = document.getElementById('edit-address')?.value?.trim() || '';
+  const guestName     = document.getElementById('edit-guest-name')?.value?.trim() || '';
+  const confirmedDate = document.getElementById('edit-confirmed-date')?.value || '';
 
+  const payload = {
+    id,
+    status,
+    email,
+    phone,
+    pickup_address: pickup,
+    preferred_dates: [..._editDates],
+    confirmed_date: confirmedDate || null,
+  };
+
+  if (primaryGuestId && guestName) {
+    payload.primary_guest = { id: primaryGuestId, name: guestName };
+  }
+
+  showLoading('Saving changes…');
   try {
     const res = await fetch(`${API_BASE}/update-booking`, {
       method: 'PUT',
@@ -519,7 +652,7 @@ async function saveBookingEdit(id) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${adminToken}`,
       },
-      body: JSON.stringify({ id, status }),
+      body: JSON.stringify(payload),
     });
     hideLoading();
 
@@ -530,9 +663,7 @@ async function saveBookingEdit(id) {
     }
 
     closeEditModal();
-    // Refresh detail view
     viewBooking(id);
-    // Also refresh the bookings list in background
     loadBookingsQuiet();
   } catch (err) {
     hideLoading();
@@ -720,7 +851,7 @@ function buildDayCell(date, today, showDayName = false) {
   const dateStr = formatDateISO(date);
   const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
   const dateInfo = adminDatesData[dateStr];
-  const isClosed = dateInfo ? !dateInfo.is_open : false;
+  const isClosed = dateInfo ? !dateInfo.is_open : true; // default: closed until explicitly opened
   const isSpecial = dateInfo?.is_special_event;
 
   let classes = 'schedule-day';
@@ -785,8 +916,11 @@ function updateDayDetails() {
   const dateStr = formatDateISO(selectedDate);
   const dateInfo = adminDatesData[dateStr];
 
-  // Availability toggle (default: open)
-  document.getElementById('availability-toggle').checked = dateInfo ? dateInfo.is_open : true;
+  // Availability toggle (default: closed — admin must explicitly open dates)
+  const isOpen = dateInfo ? dateInfo.is_open : false;
+  document.getElementById('availability-toggle').checked = isOpen;
+  const availDesc = document.getElementById('availability-desc');
+  if (availDesc) availDesc.textContent = isOpen ? 'Currently accepting bookings' : 'Closed — toggle to open';
 
   // Special event toggle + notes
   const isSpecial = dateInfo?.is_special_event || false;
@@ -981,7 +1115,6 @@ async function loadSettings() {
     const s = data.settings || {};
     const set = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
     set('setting-venue-name',         s.venue_name         || '');
-    set('setting-cuisine',            s.cuisine_type       || '');
     set('setting-address',            s.venue_address      || '');
     set('setting-email',              s.contact_email      || '');
     set('setting-phone',              s.contact_phone      || '');
@@ -1010,7 +1143,6 @@ async function saveVenueSettings() {
       body: JSON.stringify({
         settings: {
           venue_name:        get('setting-venue-name'),
-          cuisine_type:      get('setting-cuisine'),
           venue_address:     get('setting-address'),
           contact_email:     get('setting-email'),
           contact_phone:     get('setting-phone'),

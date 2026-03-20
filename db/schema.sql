@@ -38,6 +38,9 @@ CREATE TABLE IF NOT EXISTS available_dates (
   updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Add confirmed_date if it doesn't exist yet (safe to re-run)
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS confirmed_date DATE;
+
 CREATE INDEX IF NOT EXISTS idx_bookings_created_at ON bookings(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
 CREATE INDEX IF NOT EXISTS idx_guests_booking_id ON guests(booking_id);

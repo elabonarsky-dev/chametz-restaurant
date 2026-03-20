@@ -47,10 +47,16 @@ exports.handler = async (event) => {
     };
   } catch (err) {
     console.error('check-distance error:', err.message);
+    const isNotFound = err.message === 'ADDRESS_NOT_FOUND';
     return {
-      statusCode: 500,
+      statusCode: isNotFound ? 400 : 500,
       headers: corsHeaders(),
-      body: JSON.stringify({ error: err.message || 'Failed to check distance.' }),
+      body: JSON.stringify({
+        error: isNotFound
+          ? 'Our system cannot find your address. Please contact info@thechametz.com to book.'
+          : (err.message || 'Failed to check distance.'),
+        address_not_found: isNotFound,
+      }),
     };
   }
 };

@@ -17,7 +17,7 @@ async function geocodeAddress(address) {
   const data = await fetchJSON(url);
 
   if (!Array.isArray(data) || data.length === 0) {
-    throw new Error('Address could not be found. Please enter a valid US street address.');
+    throw new Error('ADDRESS_NOT_FOUND');
   }
 
   return {
