@@ -437,18 +437,20 @@ function openInvoiceModal() {
           </div>
         </div>
 
-        <table class="invoice-table">
-          <thead>
-            <tr>
-              <th>Guest Name</th>
-              <th>Birthday</th>
-              <th>Beverage</th>
-              <th>Allergies</th>
-              <th>Deposit</th>
-            </tr>
-          </thead>
-          <tbody>${guestRows}</tbody>
-        </table>
+        <div class="invoice-table-wrap">
+          <table class="invoice-table">
+            <thead>
+              <tr>
+                <th>Guest Name</th>
+                <th>Birthday</th>
+                <th>Beverage</th>
+                <th>Allergies</th>
+                <th>Deposit</th>
+              </tr>
+            </thead>
+            <tbody>${guestRows}</tbody>
+          </table>
+        </div>
 
         <div class="invoice-totals">
           <div class="invoice-total-row">
