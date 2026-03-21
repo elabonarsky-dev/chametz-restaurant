@@ -1745,7 +1745,71 @@ input:checked + .toggle-slider:before {
     grid-template-columns: 1fr;
   }
 
-  /* Edit modal full-screen on mobile */
+  /* ── Admin calendar on mobile ───────────────────────────── */
+  .schedule-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-card,
+  .day-details-card {
+    padding: 0.875rem;
+  }
+
+  .calendar-controls {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .calendar-controls-right {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .view-toggle-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .btn-reset-month {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.75rem;
+  }
+
+  .schedule-day {
+    font-size: 0.8125rem;
+    gap: 1px;
+  }
+
+  /* Hide booking counters on mobile — too small to read */
+  .cell-counter {
+    display: none;
+  }
+
+  /* Day number more prominent */
+  .schedule-day > span {
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .schedule-dow {
+    font-size: 0.5625rem;
+    padding: 0.25rem 0;
+  }
+
+  .schedule-calendar {
+    gap: 3px;
+  }
+
+  .schedule-day .dot {
+    width: 4px;
+    height: 4px;
+  }
+
+  /* ── Edit modal full-screen on mobile ───────────────────── */
   .edit-modal-card {
     width: 100%;
     max-width: 100%;
