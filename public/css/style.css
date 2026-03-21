@@ -1103,6 +1103,51 @@ textarea.form-input {
 
 /* ============ RESPONSIVE ============ */
 
+/* ── Booking calendar mobile tweaks ──────────────────────────── */
+@media (max-width: 540px) {
+  .calendar-grid {
+    gap: 3px;
+  }
+
+  .calendar-dow {
+    font-size: 0.5625rem;
+    padding: 0.3rem 0;
+  }
+
+  .calendar-day {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border-radius: 6px;
+  }
+
+  /* Hide booking counters — too small to read on mobile */
+  .bk-day-counter {
+    display: none;
+  }
+
+  /* Move the closed ✕ below the number instead of overlapping it */
+  .calendar-day.closed-by-admin::after {
+    top: auto;
+    bottom: 2px;
+    right: 50%;
+    transform: translateX(50%);
+    font-size: 0.4rem;
+  }
+
+  /* Special event star — smaller & tighter */
+  .day-event-star {
+    font-size: 0.45rem;
+    top: 2px;
+    left: 2px;
+  }
+
+  /* Tooltip disabled on touch; avoid phantom hover states */
+  .calendar-day[data-tooltip]::before,
+  .calendar-day[data-tooltip]::after {
+    display: none;
+  }
+}
+
 @media (max-width: 460px) {
   .booking-page {
     padding: 1.5rem 1rem;
