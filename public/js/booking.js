@@ -288,10 +288,6 @@ function renderSelectedDates() {
     return `<span class="date-chip">${label} <button class="date-chip-remove" onclick="removeDate('${d}')">×</button></span>`;
   }).join('');
 
-  if (state.selectedDates.length < 3) {
-    html += '<span class="select-more-chip">+ Select more</span>';
-  }
-
   list.innerHTML = html;
   btn.disabled = state.selectedDates.length === 0;
 }

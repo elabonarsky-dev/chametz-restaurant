@@ -33,8 +33,8 @@ function validateBookingInput(body) {
     errors.push('A valid pickup address is required.');
   }
 
-  if (!Array.isArray(body.preferred_dates) || body.preferred_dates.length === 0 || body.preferred_dates.length > 3) {
-    errors.push('Please select between 1 and 3 preferred dining dates.');
+  if (!Array.isArray(body.preferred_dates) || body.preferred_dates.length === 0) {
+    errors.push('Please select at least one preferred dining date.');
   }
 
   if (!Array.isArray(body.guests) || body.guests.length === 0) {
