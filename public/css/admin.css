@@ -999,28 +999,28 @@
   background: #FEF3C7;
 }
 
-/* Dots row — always anchored to bottom-centre of the cell, independent of flex */
-.cal-dot-row {
+/* Each dot is individually absolutely positioned inside the cell */
+.cal-dot {
   position: absolute;
   bottom: 4px;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 3px;
-  pointer-events: none;
-}
-
-.cal-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  flex-shrink: 0;
+  pointer-events: none;
 }
 
-.cal-dot-open    { background: #059669; }   /* green  — date is open        */
-.cal-dot-special { background: #D97706; }   /* amber  — special event       */
+.cal-dot-open    { background: #059669; }  /* green — date is open      */
+.cal-dot-special { background: #D97706; }  /* amber — special event     */
+
+/* Solo open dot: centred */
+.cal-dot-solo {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Paired dots: green slightly left, amber slightly right of centre */
+.cal-dot-pair-left  { left: calc(50% - 8px); }
+.cal-dot-pair-right { left: calc(50% + 2px); }
 
 .schedule-day-name {
   font-size: 0.6rem;
@@ -1897,6 +1897,7 @@ input:checked + .toggle-slider:before {
   .cal-dot {
     width: 5px;
     height: 5px;
+    bottom: 3px;
   }
 
   /* ── Edit modal full-screen on mobile ───────────────────── */

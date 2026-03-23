@@ -861,12 +861,16 @@ function buildDayCell(date, today, showDayName = false) {
   if (isClosed) classes += ' closed';
   if (isSpecial) classes += ' special-event-day';
 
-  // Dots absolutely positioned at bottom-centre; both show when open + special
+  // Each dot is individually absolutely positioned — no wrapper, no flex interaction
   let dotHtml = '';
   if (!isClosed) {
-    const openDot    = `<span class="cal-dot cal-dot-open"></span>`;
-    const specialDot = isSpecial ? `<span class="cal-dot cal-dot-special"></span>` : '';
-    dotHtml = `<span class="cal-dot-row">${openDot}${specialDot}</span>`;
+    if (isSpecial) {
+      // Both dots: green left-of-centre, amber right-of-centre
+      dotHtml = `<span class="cal-dot cal-dot-open cal-dot-pair-left"></span>` +
+                `<span class="cal-dot cal-dot-special cal-dot-pair-right"></span>`;
+    } else {
+      dotHtml = `<span class="cal-dot cal-dot-open cal-dot-solo"></span>`;
+    }
   }
 
   const dayAbbrs = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
