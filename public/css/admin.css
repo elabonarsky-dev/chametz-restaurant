@@ -999,24 +999,28 @@
   background: #FEF3C7;
 }
 
-.schedule-day .dot {
-  width: 5px;
-  height: 5px;
+/* Dots row — always anchored to bottom-centre of the cell, independent of flex */
+.cal-dot-row {
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  pointer-events: none;
+}
+
+.cal-dot {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: #059669;
   flex-shrink: 0;
 }
 
-.schedule-day .dot-special {
-  background: #D97706;
-}
-
-/* Two dots side-by-side when a date is both open and a special event */
-.dot-pair {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
+.cal-dot-open    { background: #059669; }   /* green  — date is open        */
+.cal-dot-special { background: #D97706; }   /* amber  — special event       */
 
 .schedule-day-name {
   font-size: 0.6rem;
@@ -1890,9 +1894,9 @@ input:checked + .toggle-slider:before {
     gap: 3px;
   }
 
-  .schedule-day .dot {
-    width: 4px;
-    height: 4px;
+  .cal-dot {
+    width: 5px;
+    height: 5px;
   }
 
   /* ── Edit modal full-screen on mobile ───────────────────── */
