@@ -12,6 +12,23 @@
     Access-Control-Allow-Headers = "Content-Type, Authorization"
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
 
+# Never serve stale JS / CSS — browser must revalidate on every load
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# HTML files: never cache at all
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
