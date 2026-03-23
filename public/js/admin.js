@@ -861,9 +861,15 @@ function buildDayCell(date, today, showDayName = false) {
   if (isClosed) classes += ' closed';
   if (isSpecial) classes += ' special-event-day';
 
-  const dotHtml = !isClosed
-    ? `<span class="dot${isSpecial ? ' dot-special' : ''}"></span>`
-    : '';
+  // Show green dot (open) and/or amber dot (special event) independently
+  let dotHtml = '';
+  if (!isClosed) {
+    if (isSpecial) {
+      dotHtml = `<span class="dot-pair"><span class="dot"></span><span class="dot dot-special"></span></span>`;
+    } else {
+      dotHtml = `<span class="dot"></span>`;
+    }
+  }
 
   const dayAbbrs = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const dayLabel = showDayName

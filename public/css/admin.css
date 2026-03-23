@@ -1004,10 +1004,18 @@
   height: 5px;
   border-radius: 50%;
   background: #059669;
+  flex-shrink: 0;
 }
 
 .schedule-day .dot-special {
   background: #D97706;
+}
+
+/* Two dots side-by-side when a date is both open and a special event */
+.dot-pair {
+  display: flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .schedule-day-name {

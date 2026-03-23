@@ -450,7 +450,7 @@ textarea.form-input {
   border-radius: var(--radius-lg);
   padding: 1.5rem 2rem;
   box-shadow: var(--shadow);
-  text-align: left;
+  text-align: center;
   max-width: 420px;
   margin: 0 auto;
 }
@@ -581,25 +581,8 @@ textarea.form-input {
   overflow: hidden;
 }
 
-/* Booking counter in top-right corner of public booking calendar */
-.bk-day-counter {
-  position: absolute;
-  top: 2px;
-  right: 3px;
-  font-size: 0.5rem;
-  font-weight: 600;
-  line-height: 1;
-  padding: 1px 2px;
-  border-radius: 2px;
-  background: rgba(0,0,0,0.07);
-  color: #6B7280;
-  pointer-events: none;
-  white-space: nowrap;
-}
-.bk-day-counter.bk-counter-full {
-  background: #DC2626;
-  color: #fff;
-}
+/* Booking counters are not shown to guests */
+.bk-day-counter { display: none; }
 .calendar-day.fully-booked {
   background: #F3F4F6;
   color: #9CA3AF;
@@ -645,14 +628,15 @@ textarea.form-input {
   background: #FDE68A;
 }
 
-.day-event-star {
+.day-event-info {
   position: absolute;
-  top: 3px;
-  right: 4px;
-  font-size: 0.45rem;
-  color: #D97706;
+  top: 2px;
+  right: 3px;
+  font-size: 0.6rem;
+  color: #B45309;
   line-height: 1;
   pointer-events: none;
+  font-style: normal;
 }
 
 /* ── Tooltip (data-tooltip attribute) ── */
@@ -1120,11 +1104,6 @@ textarea.form-input {
     border-radius: 6px;
   }
 
-  /* Hide booking counters — too small to read on mobile */
-  .bk-day-counter {
-    display: none;
-  }
-
   /* Move the closed ✕ below the number instead of overlapping it */
   .calendar-day.closed-by-admin::after {
     top: auto;
@@ -1134,11 +1113,11 @@ textarea.form-input {
     font-size: 0.4rem;
   }
 
-  /* Special event star — smaller & tighter */
-  .day-event-star {
-    font-size: 0.45rem;
-    top: 2px;
-    left: 2px;
+  /* Special event info icon — smaller on mobile */
+  .day-event-info {
+    font-size: 0.55rem;
+    top: 1px;
+    right: 2px;
   }
 
   /* Tooltip disabled on touch; avoid phantom hover states */

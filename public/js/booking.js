@@ -233,7 +233,7 @@ function renderCalendar() {
       ? ` data-tooltip="${notes.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}"`
       : '';
     const starHtml = isSpecial && !isClosed && !isPast
-      ? '<span class="day-event-star">★</span>'
+      ? '<span class="day-event-info" aria-label="Special event">ⓘ</span>'
       : '';
 
     // Booking counter in top-right corner
@@ -289,7 +289,7 @@ function renderSelectedDates() {
   }).join('');
 
   list.innerHTML = html;
-  btn.disabled = state.selectedDates.length === 0;
+  btn.disabled = state.selectedDates.length < 3;
 }
 
 // ─── Step 3: Guests ───────────────────────────────────────────
