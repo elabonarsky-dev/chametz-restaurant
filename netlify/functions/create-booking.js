@@ -1,6 +1,6 @@
 const { transaction } = require('../../utils/db');
-const { validateBookingInput } = require('../../utils/validate');
-const { corsHeaders } = require('../../utils/auth');
+const { validateBookingInput, validateAdminBookingInput } = require('../../utils/validate');
+const { verifyAdminAsync, corsHeaders } = require('../../utils/auth');
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -17,7 +17,10 @@ exports.handler = async (event) => {
 
   try {
     const body = JSON.parse(event.body || '{}');
-    const errors = validateBookingInput(body);
+
+    // Admin-created bookings skip Stripe and use relaxed validation
+    const isAdmin = await verifyAdminAsync(event.headers);
+    const errors = isAdmin ? validateAdminBookingInput(body) : validateBookingInput(body);
 
     if (errors.length > 0) {
       return {
@@ -26,6 +29,11 @@ exports.handler = async (event) => {
         body: JSON.stringify({ errors }),
       };
     }
+
+    // Admin bookings: no deposit, mark as confirmed, record who created it
+    const stripePaymentId = isAdmin ? null : body.stripe_payment_id;
+    const depositAmount   = isAdmin ? 0    : (body.deposit_amount || 0);
+    const status          = 'confirmed';
 
     const result = await transaction(async (client) => {
       // Insert the booking record
@@ -40,9 +48,9 @@ exports.handler = async (event) => {
           body.travel_time_minutes || 0,
           body.satellite_confirmation || false,
           JSON.stringify(body.preferred_dates),
-          'confirmed',
-          body.stripe_payment_id,
-          body.deposit_amount || 0,
+          status,
+          stripePaymentId,
+          depositAmount,
           body.occasion || null,
           body.phone || null,
           body.email || null,

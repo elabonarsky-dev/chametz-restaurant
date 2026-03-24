@@ -50,10 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderBookingsTable(filtered);
   });
 
-  // New Booking — opens the customer booking form in a new tab
-  document.querySelector('.btn-new-booking').addEventListener('click', () => {
-    window.open('/', '_blank');
-  });
+  // New Booking — handled by openAdminBookingModal() via onclick in HTML
 
   // Month / Week view toggle — use data-view-mode so idx order doesn't matter
   document.querySelectorAll('.view-toggle-btn').forEach((btn) => {
@@ -300,6 +297,20 @@ function renderBookingDetails(booking) {
   document.getElementById('detail-summary').textContent = `Reservation for ${guestCount} guest${guestCount !== 1 ? 's' : ''}`;
   
   document.getElementById('detail-address').textContent = booking.pickup_address || 'N/A';
+
+  // Satellite parking confirmation
+  const satEl = document.getElementById('detail-satellite');
+  if (satEl) {
+    if (booking.satellite_confirmation) {
+      satEl.textContent = 'Yes — will use satellite parking';
+      satEl.style.color = 'var(--c-primary)';
+      satEl.style.fontWeight = '600';
+    } else {
+      satEl.textContent = 'No — direct pickup';
+      satEl.style.color = 'var(--c-text-muted)';
+      satEl.style.fontWeight = '';
+    }
+  }
   
   // Dates formatted as "Mar 18 2026" (no comma before year)
   const dates = Array.isArray(booking.preferred_dates)
@@ -1114,6 +1125,211 @@ async function resetMonthToOpen() {
   }
 }
 
+// ─── Admin Create Booking Modal ───────────────────────────────
+let _adminBookingDates = [];
+
+function openAdminBookingModal() {
+  const existing = document.getElementById('admin-create-booking-modal');
+  if (existing) existing.remove();
+  _adminBookingDates = [];
+
+  const modal = document.createElement('div');
+  modal.id = 'admin-create-booking-modal';
+  modal.className = 'edit-modal-overlay';
+  modal.innerHTML = `
+    <div class="edit-modal-card" style="max-width:680px;">
+      <div class="edit-modal-header">
+        <h3 class="edit-modal-title">New Booking (Admin)</h3>
+        <button class="edit-modal-close" onclick="closeAdminBookingModal()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="edit-modal-body">
+        <p style="font-size:0.8125rem;color:var(--c-text-muted);margin:0 0 1rem;background:#FEF3C7;padding:0.6rem 0.75rem;border-radius:6px;">
+          ℹ️ Admin-created bookings are confirmed immediately with no deposit required.
+        </p>
+
+        <div class="edit-modal-section-title">Contact Information</div>
+        <div class="edit-modal-row">
+          <div class="form-group">
+            <label class="form-label">Primary Guest Name <span class="required">*</span></label>
+            <input type="text" class="form-input" id="acb-guest-name" placeholder="Full name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Birthday (YYYY-MM-DD) <span class="required">*</span></label>
+            <input type="date" class="form-input" id="acb-birthday">
+          </div>
+        </div>
+        <div class="edit-modal-row">
+          <div class="form-group">
+            <label class="form-label">Phone <span class="required">*</span></label>
+            <input type="tel" class="form-input" id="acb-phone" placeholder="+1 (415) 484-3205">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email <span class="required">*</span></label>
+            <input type="email" class="form-input" id="acb-email" placeholder="guest@example.com">
+          </div>
+        </div>
+
+        <div class="edit-modal-section-title">Pickup</div>
+        <div class="edit-modal-row">
+          <div class="form-group">
+            <label class="form-label">Pickup Address <span class="required">*</span></label>
+            <input type="text" class="form-input" id="acb-address" placeholder="Street address">
+          </div>
+          <div class="form-group" style="display:flex;align-items:center;gap:0.75rem;padding-top:1.6rem;">
+            <input type="checkbox" id="acb-satellite" style="width:18px;height:18px;cursor:pointer;">
+            <label for="acb-satellite" style="font-size:0.875rem;cursor:pointer;">Will use satellite parking</label>
+          </div>
+        </div>
+
+        <div class="edit-modal-section-title">Beverage Pairing</div>
+        <div class="form-group">
+          <div class="toggle-group">
+            <button type="button" id="acb-pairing-alcoholic" class="toggle-btn active" onclick="setAdminPairing('alcoholic')">🍷 Alcoholic</button>
+            <button type="button" id="acb-pairing-non" class="toggle-btn" onclick="setAdminPairing('non-alcoholic')">🥤 Non-alcoholic</button>
+          </div>
+        </div>
+
+        <div class="edit-modal-section-title">Allergies / Special Requirements</div>
+        <div class="form-group">
+          <textarea class="form-input" id="acb-allergies" rows="2" placeholder="Any allergies or dietary requirements..."></textarea>
+        </div>
+
+        <div class="edit-modal-section-title">Preferred Dates <span style="font-weight:400;font-size:0.8rem;">(add at least 1)</span></div>
+        <div id="acb-dates-list" class="edit-dates-list"></div>
+        <div class="edit-dates-add">
+          <input type="date" class="form-input" id="acb-add-date-input">
+          <button class="btn btn-outline btn-sm" onclick="acbAddDate()">+ Add Date</button>
+        </div>
+
+        <div id="acb-error" class="alert alert-error hidden" style="margin-top:1rem;"></div>
+      </div>
+      <div class="edit-modal-footer">
+        <button class="btn btn-outline" onclick="closeAdminBookingModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitAdminBooking()">Create Booking</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeAdminBookingModal(); });
+  renderAcbDatesList();
+}
+
+let _adminBeveragePairing = 'alcoholic';
+
+function setAdminPairing(val) {
+  _adminBeveragePairing = val;
+  document.getElementById('acb-pairing-alcoholic')?.classList.toggle('active', val === 'alcoholic');
+  document.getElementById('acb-pairing-non')?.classList.toggle('active', val === 'non-alcoholic');
+}
+
+function renderAcbDatesList() {
+  const list = document.getElementById('acb-dates-list');
+  if (!list) return;
+  list.innerHTML = _adminBookingDates.length === 0
+    ? '<p style="font-size:0.8125rem;color:var(--c-text-muted);margin:0 0 0.5rem;">No dates added yet.</p>'
+    : _adminBookingDates.map(d => `
+        <div class="edit-date-chip">
+          <span>${formatAdminDate(d)}</span>
+          <button class="edit-date-remove" onclick="acbRemoveDate('${d}')" title="Remove">×</button>
+        </div>`).join('');
+}
+
+function acbAddDate() {
+  const input = document.getElementById('acb-add-date-input');
+  if (!input || !input.value) return;
+  if (!_adminBookingDates.includes(input.value)) {
+    _adminBookingDates.push(input.value);
+    _adminBookingDates.sort();
+    renderAcbDatesList();
+  }
+  input.value = '';
+}
+
+function acbRemoveDate(d) {
+  _adminBookingDates = _adminBookingDates.filter(x => x !== d);
+  renderAcbDatesList();
+}
+
+function closeAdminBookingModal() {
+  const modal = document.getElementById('admin-create-booking-modal');
+  if (modal) modal.remove();
+  _adminBookingDates = [];
+  _adminBeveragePairing = 'alcoholic';
+}
+
+async function submitAdminBooking() {
+  const get = (id) => (document.getElementById(id)?.value || '').trim();
+  const errEl = document.getElementById('acb-error');
+  if (errEl) errEl.classList.add('hidden');
+
+  const guestName  = get('acb-guest-name');
+  const birthday   = get('acb-birthday');
+  const phone      = get('acb-phone');
+  const email      = get('acb-email');
+  const address    = get('acb-address');
+  const allergies  = get('acb-allergies');
+  const satellite  = document.getElementById('acb-satellite')?.checked || false;
+
+  const errs = [];
+  if (!guestName) errs.push('Guest name is required.');
+  if (!birthday)  errs.push('Birthday is required.');
+  if (!phone)     errs.push('Phone is required.');
+  if (!email)     errs.push('Email is required.');
+  if (!address || address.length < 5) errs.push('Pickup address is required.');
+  if (_adminBookingDates.length < 1)  errs.push('Add at least one preferred date.');
+
+  if (errs.length > 0) {
+    if (errEl) { errEl.innerHTML = errs.join('<br>'); errEl.classList.remove('hidden'); }
+    return;
+  }
+
+  const payload = {
+    pickup_address:         address,
+    travel_time_minutes:    0,
+    satellite_confirmation: satellite,
+    preferred_dates:        [..._adminBookingDates],
+    phone,
+    email,
+    guests: [{
+      name:             guestName,
+      birthday,
+      beverage_pairing: _adminBeveragePairing,
+      allergies,
+    }],
+  };
+
+  showLoading('Creating booking…');
+  try {
+    const res = await fetch(`${API_BASE}/create-booking`, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    hideLoading();
+
+    if (!res.ok) {
+      const msg = (data.errors || [data.error || 'Failed to create booking.']).join('<br>');
+      if (errEl) { errEl.innerHTML = msg; errEl.classList.remove('hidden'); }
+      return;
+    }
+
+    closeAdminBookingModal();
+    loadBookings();
+    alert(`Booking created successfully! ID: #BK-${bookingsData.length + 1}`);
+  } catch (err) {
+    hideLoading();
+    if (errEl) { errEl.textContent = 'Network error. Please try again.'; errEl.classList.remove('hidden'); }
+  }
+}
+
 // ─── Settings ─────────────────────────────────────────────────
 async function loadSettings() {
   try {
@@ -1124,11 +1340,12 @@ async function loadSettings() {
     const data = await res.json();
     const s = data.settings || {};
     const set = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
-    set('setting-venue-name',         s.venue_name         || '');
-    set('setting-address',            s.venue_address      || '');
-    set('setting-email',              s.contact_email      || '');
-    set('setting-phone',              s.contact_phone      || '');
-    set('setting-reservation-limit',  s.reservation_limit  || '');
+    set('setting-venue-name',          s.venue_name          || '');
+    set('setting-address',             s.venue_address       || '');
+    set('setting-email',               s.contact_email       || '');
+    set('setting-phone',               s.contact_phone       || '');
+    set('setting-reservation-limit',   s.reservation_limit   || '');
+    set('setting-satellite-location',  s.satellite_location  || '');
   } catch (_) {}
 }
 
@@ -1152,11 +1369,12 @@ async function saveVenueSettings() {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
       body: JSON.stringify({
         settings: {
-          venue_name:        get('setting-venue-name'),
-          venue_address:     get('setting-address'),
-          contact_email:     get('setting-email'),
-          contact_phone:     get('setting-phone'),
-          reservation_limit: String(limit),
+          venue_name:         get('setting-venue-name'),
+          venue_address:      get('setting-address'),
+          contact_email:      get('setting-email'),
+          contact_phone:      get('setting-phone'),
+          reservation_limit:  String(limit),
+          satellite_location: get('setting-satellite-location'),
         },
       }),
     });

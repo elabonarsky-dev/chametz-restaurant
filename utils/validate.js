@@ -68,4 +68,43 @@ function validateBookingInput(body) {
   return errors;
 }
 
-module.exports = { validateGuestAge, validateBookingInput };
+/** Relaxed validator for admin-created bookings — no Stripe, 1+ dates allowed */
+function validateAdminBookingInput(body) {
+  const errors = [];
+
+  if (!body.pickup_address || typeof body.pickup_address !== 'string' || body.pickup_address.trim().length < 5) {
+    errors.push('A valid pickup address is required.');
+  }
+
+  if (!Array.isArray(body.preferred_dates) || body.preferred_dates.length < 1) {
+    errors.push('At least one preferred dining date is required.');
+  }
+
+  if (!Array.isArray(body.guests) || body.guests.length === 0) {
+    errors.push('At least one guest is required.');
+  }
+
+  if (body.guests && Array.isArray(body.guests)) {
+    body.guests.forEach((guest, i) => {
+      if (!guest.name || guest.name.trim().length < 2) {
+        errors.push(`Guest ${i + 1}: Name is required (minimum 2 characters).`);
+      }
+      if (!guest.birthday) {
+        errors.push(`Guest ${i + 1}: Date of birth is required.`);
+      }
+      if (!['alcoholic', 'non-alcoholic'].includes(guest.beverage_pairing)) {
+        errors.push(`Guest ${i + 1}: Beverage pairing must be "alcoholic" or "non-alcoholic".`);
+      }
+      if (guest.birthday && guest.beverage_pairing) {
+        const ageCheck = validateGuestAge(guest.birthday, guest.beverage_pairing);
+        if (!ageCheck.valid) {
+          errors.push(`Guest ${i + 1}: ${ageCheck.message}`);
+        }
+      }
+    });
+  }
+
+  return errors;
+}
+
+module.exports = { validateGuestAge, validateBookingInput, validateAdminBookingInput };

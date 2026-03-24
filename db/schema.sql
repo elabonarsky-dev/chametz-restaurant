@@ -56,10 +56,11 @@ CREATE TABLE IF NOT EXISTS app_settings (
 
 -- Seed sensible defaults (do nothing if row already exists)
 INSERT INTO app_settings (key, value) VALUES
-  ('venue_name',         'The Chametz Restaurant'),
-  ('cuisine_type',       'American'),
-  ('venue_address',      ''),
-  ('contact_email',      ''),
-  ('contact_phone',      ''),
-  ('reservation_limit',  '')
+  ('venue_name',          'The Chametz Restaurant'),
+  ('cuisine_type',        'American'),
+  ('venue_address',       ''),
+  ('contact_email',       ''),
+  ('contact_phone',       ''),
+  ('reservation_limit',   ''),
+  ('satellite_location',  '1798 New Vineyard Road, New Vineyard, Maine')
 ON CONFLICT (key) DO NOTHING;

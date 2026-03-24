@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Portal — Restaurant Booking</title>
-  <link rel="stylesheet" href="../css/style.css?v=20260324">
-  <link rel="stylesheet" href="../css/admin.css?v=20260324">
+  <link rel="stylesheet" href="../css/style.css?v=20260317e">
+  <link rel="stylesheet" href="../css/admin.css?v=20260317e">
 </head>
 <body>
   <!-- AUTH MODAL -->
@@ -76,7 +76,7 @@
           </svg>
           <input type="text" placeholder="Search bookings..." id="search-input">
         </div>
-        <button class="btn-new-booking">
+        <button class="btn-new-booking" onclick="openAdminBookingModal()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
@@ -218,6 +218,15 @@
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
                     <span id="detail-confirmed-date" style="font-weight:600;"></span>
+                  </div>
+                </div>
+                <div class="detail-item">
+                  <div class="detail-label">Satellite Parking</div>
+                  <div class="detail-value">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    <span id="detail-satellite"></span>
                   </div>
                 </div>
               </div>
@@ -422,6 +431,13 @@
                 <p class="settings-field-hint">Maximum guests per day — applies to new Available Dates entries.</p>
               </div>
             </div>
+            <div class="settings-form-row full">
+              <div class="form-group">
+                <label class="form-label">Satellite Parking Location</label>
+                <input type="text" class="form-input" id="setting-satellite-location" placeholder="e.g. 1798 New Vineyard Road, New Vineyard, Maine">
+                <p class="settings-field-hint">Shown to guests who are outside the standard pickup area. Displayed on the booking form.</p>
+              </div>
+            </div>
             <div id="venue-save-msg" class="settings-save-msg hidden"></div>
             <div class="settings-actions">
               <button class="btn-save" onclick="saveVenueSettings()">Save Venue Changes</button>
@@ -464,6 +480,6 @@
     <span class="loading-text" id="loading-text">Loading...</span>
   </div>
 
-  <script src="../js/admin.js?v=20260324"></script>
+  <script src="../js/admin.js?v=20260317e"></script>
 </body>
 </html>

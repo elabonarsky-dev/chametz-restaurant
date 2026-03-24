@@ -58,7 +58,21 @@ document.addEventListener('DOMContentLoaded', () => {
   calendarMonth = now.getMonth();
   calendarYear = now.getFullYear();
   renderGuestCards();
+  loadPublicSettings();
 });
+
+async function loadPublicSettings() {
+  try {
+    const res = await fetch(`${API_BASE}/get-public-settings`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const loc = (data.settings || {}).satellite_location;
+    if (loc) {
+      const el = document.getElementById('satellite-address-text');
+      if (el) el.textContent = loc;
+    }
+  } catch (_) { /* silent — static fallback already in HTML */ }
+}
 
 // ─── Step Navigation ──────────────────────────────────────────
 function goToStep(step) {
