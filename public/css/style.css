@@ -306,6 +306,15 @@ textarea.form-input {
   background: var(--c-primary-hover);
 }
 
+.btn-primary:disabled,
+.btn-primary[disabled] {
+  background: #C8BDB0;
+  color: #fff;
+  cursor: not-allowed;
+  opacity: 0.65;
+  pointer-events: none;
+}
+
 .btn-outline {
   background: transparent;
   border: 1px solid var(--c-border);
@@ -578,7 +587,6 @@ textarea.form-input {
   cursor: pointer;
   transition: all 0.15s;
   position: relative;
-  overflow: hidden;
 }
 
 /* Booking counters are not shown to guests */
@@ -680,6 +688,10 @@ textarea.form-input {
   opacity: 1;
 }
 
+.calendar-day[data-tooltip]:hover {
+  z-index: 10;
+}
+
 .calendar-day.empty {
   cursor: default;
 }
@@ -687,6 +699,14 @@ textarea.form-input {
 /* Selected Dates */
 .selected-dates {
   margin-bottom: 1.5rem;
+}
+
+.dates-min-hint {
+  text-align: center;
+  font-size: 0.8125rem;
+  color: #92400E;
+  margin-top: 0.5rem;
+  min-height: 1.2em;
 }
 
 .selected-dates-label {

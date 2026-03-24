@@ -280,6 +280,7 @@ function removeDate(dateStr) {
 function renderSelectedDates() {
   const list = document.getElementById('selected-dates-list');
   const btn = document.getElementById('btn-continue-dates');
+  const hint = document.getElementById('dates-min-hint');
 
   let html = state.selectedDates.map(d => {
     const parts = d.split('-');
@@ -289,7 +290,14 @@ function renderSelectedDates() {
   }).join('');
 
   list.innerHTML = html;
-  btn.disabled = state.selectedDates.length < 3;
+
+  const need = Math.max(0, 3 - state.selectedDates.length);
+  btn.disabled = need > 0;
+  if (hint) {
+    hint.textContent = need > 0
+      ? `Please select ${need} more preferred date${need > 1 ? 's' : ''} to continue.`
+      : '';
+  }
 }
 
 // ─── Step 3: Guests ───────────────────────────────────────────
