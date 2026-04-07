@@ -5,6 +5,11 @@
 [functions]
   node_bundler = "esbuild"
 
+# check-distance calls external OSRM + geocoding; allow enough time when the demo server is slow
+[[functions]]
+  name = "check-distance"
+  timeout = 26
+
 [[headers]]
   for = "/api/*"
   [headers.values]
