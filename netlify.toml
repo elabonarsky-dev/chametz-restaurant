@@ -5,9 +5,6 @@
 [functions]
   node_bundler = "esbuild"
 
-[functions.check-distance]
-  timeout = 26
-
 [[headers]]
   for = "/api/*"
   [headers.values]
